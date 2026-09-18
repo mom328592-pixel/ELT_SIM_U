@@ -1,0 +1,3 @@
+USE sim_management_db;
+SELECT 'roles' table_name, COUNT(*) total FROM roles UNION ALL SELECT 'users',COUNT(*) FROM users UNION ALL SELECT 'agents',COUNT(*) FROM agents UNION ALL SELECT 'customers',COUNT(*) FROM customers UNION ALL SELECT 'sim_cards',COUNT(*) FROM sim_cards UNION ALL SELECT 'packages',COUNT(*) FROM packages UNION ALL SELECT 'registrations',COUNT(*) FROM registrations UNION ALL SELECT 'payments',COUNT(*) FROM payments;
+SELECT s.id_sim,s.iccid,s.phone_number,st.sim_type,ss.sim_status FROM sim_cards s LEFT JOIN sim_types st ON s.id_sim_type=st.id_sim_type LEFT JOIN sim_status ss ON s.id_sim_status=ss.id_sim_status ORDER BY s.id_sim;

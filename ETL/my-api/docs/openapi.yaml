@@ -1,0 +1,159 @@
+openapi: 3.0.3
+info:
+  title: SIM Registration & Management API
+  description: API ມາດຕະຖານສໍາລັບລະບົບຈັດການ SIM, ລົງທະບຽນ ແລະ Agent
+  version: 1.0.0
+
+servers:
+  - url: https://api.yourdomain.com/v1
+    description: Production Server
+
+paths:
+  # -------------------------------------------------------------
+  # 1. AUTHENTICATION
+  # -------------------------------------------------------------
+  /auth/login:
+    post:
+      summary: ເຂົ້າສູ່ລະບົບ (Login)
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  example: "admin_user"
+                password:
+                  type: string
+                  example: "Secret@123"
+      responses:
+        '200':
+          description: ເຂົ້າສູ່ລະບົບສໍາເລັດ
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1Ni..."
+                  token_type:
+                    type: string
+                    example: "Bearer"
+                  expires_in:
+                    type: integer
+                    example: 3600
+        '401':
+          description: Username ຫຼື Password ບໍ່ຖືກຕ້ອງ
+
+  # -------------------------------------------------------------
+  # 2. SIM MANAGEMENT
+  # -------------------------------------------------------------
+  /sims:
+    get:
+      summary: ດຶງລາຍການ SIM ທັງໝົດ
+      tags:
+        - SIM Management
+      parameters:
+        - name: status
+          in: query
+          description: ກັ່ນກອງຕາມສະຖານະ SIM
+          required: false
+          schema:
+            type: string
+            example: "AVAILABLE"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: ດຶງຂໍ້ມູນສໍາເລັດ
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    example: 100
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SimCard'
+
+  # -------------------------------------------------------------
+  # 3. SIM REGISTRATION
+  # -------------------------------------------------------------
+  /registrations:
+    post:
+      summary: ສ້າງລາຍການລົງທະບຽນ SIM ໃໝ່
+      tags:
+        - Registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id_sim
+                - id_agent
+                - customer
+              properties:
+                id_sim:
+                  type: integer
+                  example: 12
+                id_agent:
+                  type: integer
+                  example: 5
+                customer:
+                  type: object
+                  properties:
+                    first_name:
+                      type: string
+                      example: "Somsack"
+                    last_name:
+                      type: string
+                      example: "Phommachanh"
+                    passport_number:
+                      type: string
+                      example: "P1234567"
+                    nationality:
+                      type: string
+                      example: "Lao"
+      responses:
+        '201':
+          description: ສ້າງລາຍການລົງທະບຽນສໍາເລັດ
+
+# -------------------------------------------------------------
+# SCHEMAS (ໂຄງສ້າງຂໍ້ມູນທີ່ໃຊ້ຊໍ້າ)
+# -------------------------------------------------------------
+components:
+  schemas:
+    SimCard:
+      type: object
+      properties:
+        id_sim:
+          type: integer
+          example: 1
+        iccid:
+          type: string
+          example: "8985600000000000001"
+        imsi:
+          type: string
+          example: "457010000000001"
+        phone_number:
+          type: string
+          example: "2055551234"
+        sim_status:
+          type: string
+          example: "ACTIVE"

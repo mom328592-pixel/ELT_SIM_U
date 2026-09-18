@@ -1,0 +1,10 @@
+const express=require('express');
+const multer=require('multer');
+const path=require('path');
+const fs=require('fs');
+const router=express.Router();
+const allowed=new Set(['passport','avatar','document','qr']);
+const storage=multer.diskStorage({destination:(req,file,cb)=>{const type=allowed.has(req.body?.type)?req.body.type:'documents';const dir=path.join(__dirname,'..','uploads',type+'s');fs.mkdirSync(dir,{recursive:true});cb(null,dir)},filename:(req,file,cb)=>{const safe=path.extname(file.originalname).toLowerCase();cb(null,`${file.fieldname}-${Date.now()}-${Math.round(Math.random()*1e9)}${safe}`)}});
+const upload=multer({storage,limits:{fileSize:10*1024*1024},fileFilter:(req,file,cb)=>file.mimetype.startsWith('image/')||file.mimetype==='application/pdf'?cb(null,true):cb(new Error('Only images or PDF files are allowed'))});
+router.post('/',upload.single('file'),(req,res)=>{if(!req.file)return res.status(400).json({success:false,message:'file is required'});const relative=req.file.path.split(path.sep).slice(-2).join('/');res.status(201).json({success:true,data:{file_name:req.file.filename,url:`/uploads/${relative}`}})});
+module.exports=router;
