@@ -6,7 +6,7 @@ require("dotenv").config();
 const rolesRoutes = require("./routes/roles.routes");
 const usersRoutes = require("./routes/users.routes");
 const agentsRoutes = require("./routes/agents.routes");
-const simRoutes = require("./routes/sim.routes");
+const simsRoutes = require("./routes/sims.routes");
 const customersRoutes = require("./routes/customers.routes");
 const registrationsRoutes = require("./routes/registrations.routes");
 const authRoutes = require("./routes/auth.routes");
@@ -108,7 +108,7 @@ app.use("/sim-files/history", authenticateToken, authorizeRoles(1, 2), simFileHi
 app.use("/sim-files", authenticateToken, authorizeRoles(1, 2), simFileRoutes);
 
 // SIM & CUSTOMERS
-app.use("/sim", authenticateToken, authorizeRoles(1, 2, 3), simRoutes);
+app.use("/sims", authenticateToken, authorizeRoles(1, 2, 3), simsRoutes);
 app.use("/customers", authenticateToken, authorizeRoles(1, 2, 3), customersRoutes);
 app.use("/registrations", authenticateToken, authorizeRoles(1, 2, 3), registrationsRoutes);
 app.use("/registrations", authenticateToken, authorizeRoles(1), require("./routes/registration-review.routes"));
