@@ -1,4 +1,4 @@
-USE sim_management_db;
+USE sim1;
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS passport_expiry_date DATE NULL;
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS phone_number VARCHAR(50) NULL;
 ALTER TABLE sim_cards ADD COLUMN IF NOT EXISTS activation_code VARCHAR(255) NULL;

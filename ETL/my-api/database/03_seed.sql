@@ -1,4 +1,4 @@
-USE sim_management_db;
+USE sim1;
 INSERT INTO roles (id_role, role_name, description) VALUES (1,'Admin','Top-level system administrator'),(2,'Agent','Dealer/agent'),(3,'Staff','Inspection staff') ON DUPLICATE KEY UPDATE role_name=VALUES(role_name),description=VALUES(description);
 INSERT INTO status_user (id_status_user,status_name,description) VALUES (1,'Active','Active user'),(2,'Inactive','Inactive user'),(3,'Suspended','Suspended user') ON DUPLICATE KEY UPDATE status_name=VALUES(status_name),description=VALUES(description);
 INSERT INTO sim_types (id_sim_type,sim_type,description) VALUES (1,'Physical SIM','Plastic SIM card'),(2,'eSIM','Embedded SIM with QR activation') ON DUPLICATE KEY UPDATE sim_type=VALUES(sim_type),description=VALUES(description);

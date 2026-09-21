@@ -1,5 +1,5 @@
 -- This file prepares the Admin role/status. Password hashing is handled by create-admin.js.
-USE sim_management_db;
+USE sim1;
 
 INSERT INTO roles (id_role, role_name, description)
 VALUES (1, 'Admin', 'Top-level system administrator')
