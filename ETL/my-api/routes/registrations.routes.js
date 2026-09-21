@@ -1,21 +1,14 @@
-
-// routes/sims.routes.js
 const express = require('express');
 const router = express.Router();
-const { getAvailableSims } = require('../controllers/sims.controller');
 
-// ປະກາດ Route ສຳລັບດຶງຂໍ້ມູນ SIM ທີ່ຫວ່າງ
-router.get('/public/sims/available', getAvailableSims);
-
-module.exports = router;
+// 1. ตรวจสอบให้มั่นใจว่า controller มีการ export ฟังก์ชันเหล่านี้ไว้อย่างถูกต้อง
 const {
-    getAllRegistrations,
-    getRegistrationById,
-    createRegistration,
-    updateRegistration,
-    deleteRegistration
+  getAllRegistrations,
+  getRegistrationById,
+  createRegistration,
+  updateRegistration,
+  deleteRegistration
 } = require("../controllers/registrations.controller");
-
 
 /**
  * @openapi
@@ -35,7 +28,6 @@ const {
  *         description: Forbidden
  */
 router.get("/", getAllRegistrations);
-
 
 /**
  * @openapi
@@ -60,7 +52,6 @@ router.get("/", getAllRegistrations);
  *         description: Registration not found
  */
 router.get("/:id", getRegistrationById);
-
 
 /**
  * @openapi
@@ -118,7 +109,6 @@ router.get("/:id", getRegistrationById);
  *         description: Customer, SIM, Agent, Status or Reviewer not found
  */
 router.post("/", createRegistration);
-
 
 /**
  * @openapi
@@ -178,7 +168,6 @@ router.post("/", createRegistration);
  */
 router.put("/:id", updateRegistration);
 
-
 /**
  * @openapi
  * /registrations/{id}:
@@ -203,5 +192,5 @@ router.put("/:id", updateRegistration);
  */
 router.delete("/:id", deleteRegistration);
 
-
+// ส่งออก router อยู่ด้านล่างสุดของไฟล์เสมอ
 module.exports = router;

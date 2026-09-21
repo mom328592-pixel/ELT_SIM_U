@@ -1,5 +1,9 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
+const { getAvailableSims } = require('../controllers/sims.controller');
+
+// ประกาศ Route สำหรับดึงข้อมูล SIM ที่ว่าง
+router.get('/public/sims/available', getAvailableSims);
 
 const {
     getAllSims,
