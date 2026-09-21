@@ -7,7 +7,7 @@ const {
     createSim,
     updateSim,
     deleteSim
-} = require("../controllers/sim.controller");
+} = require("../controllers/sims.controller");
 
 
 /**
