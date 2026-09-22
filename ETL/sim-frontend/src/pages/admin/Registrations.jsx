@@ -301,8 +301,8 @@ function Registrations() {
 
       const query = params.toString();
       const url = query
-        ? `http://localhost:3000/export/registrations?${query}`
-        : "http://localhost:3000/export/registrations";
+        ? `https://eltsimu.onrender.com/export/registrations?${query}`
+        : "https://eltsimu.onrender.com/export/registrations";
 
       const response = await fetch(url, {
         headers: {

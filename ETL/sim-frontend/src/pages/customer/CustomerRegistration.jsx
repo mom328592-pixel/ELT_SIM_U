@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const API_URL = "http://localhost:3000";
+const API_URL = "https://eltsimu.onrender.com";
 
 function CustomerRegistration() {
   const [step, setStep] = useState(1);

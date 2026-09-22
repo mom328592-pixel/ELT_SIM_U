@@ -43,7 +43,7 @@ function SimManagement() {
     try {
       const token = localStorage.getItem("access_token");
 
-      const response = await fetch("http://localhost:3000/export/sims", {
+      const response = await fetch("https://eltsimu.onrender.com/export/sims", {
         headers: {
           Authorization: `Bearer ${token}`,
         },

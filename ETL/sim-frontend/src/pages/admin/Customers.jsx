@@ -32,7 +32,7 @@ function Customers() {
     try {
       const token = localStorage.getItem("access_token");
 
-      const response = await fetch("http://localhost:3000/export/customers", {
+      const response = await fetch("https://eltsimu.onrender.com/export/customers", {
         headers: {
           Authorization: `Bearer ${token}`,
         },

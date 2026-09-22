@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import { apiFetch } from "../../api";
 
-const API_URL = "http://localhost:3000";
+const API_URL = "https://eltsimu.onrender.com";
 
 function SimImport() {
   const [agents, setAgents] = useState([]);
