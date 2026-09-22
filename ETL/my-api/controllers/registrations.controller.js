@@ -603,7 +603,6 @@ const approveRegistration = (req, res) => reviewRegistration(req, res, true);
 const rejectRegistration = (req, res) => reviewRegistration(req, res, false);
 
 module.exports = {
-    getAllRegistrations,
     getRegistrationById,
     createRegistration,
     updateRegistration,
