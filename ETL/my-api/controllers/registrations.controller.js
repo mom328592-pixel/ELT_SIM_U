@@ -18,9 +18,60 @@ const getAdminUserIds = async (connection) => {
 };
 
 // 1. GET ALL REGISTRATIONS
+const getAllRegistrations = async (req, res) => {
+    try {
+        const [rows] = await pool.query(`
+            SELECT 
+                r.id_registration,
+                r.id_registration_status,
+                rs.status_name AS registration_status,
+                r.id_customer,
+                CONCAT(c.first_name, ' ', c.last_name) AS customer_name,
+                c.passport_number,
+                r.id_sim,
+                s.phone_number,
+                s.iccid,
+                s.imsi,
+                r.id_agent,
+                a.agent_name,
+                r.id_package,
+                p.package_name,
+                p.price AS package_price,
+                r.registered_at,
+                r.reviewed_by,
+                u.username AS reviewed_by_username,
+                r.reviewed_at,
+                r.notes,
+                r.created_at,
+                r.updated_at
+            FROM registrations r
+            LEFT JOIN registrations_status rs ON r.id_registration_status = rs.id_registration_status
+            LEFT JOIN customers c ON r.id_customer = c.id_customer
+            LEFT JOIN sim_cards s ON r.id_sim = s.id_sim
+            LEFT JOIN agents a ON r.id_agent = a.id_agent
+            LEFT JOIN packages p ON r.id_package = p.id_package
+            LEFT JOIN users u ON r.reviewed_by = u.id_user
+            WHERE r.deleted_at IS NULL
+            ORDER BY r.created_at DESC
+        `);
+
+        res.json({
+            success: true,
+            data: rows
+        });
+    } catch (error) {
+        console.error("GET ALL REGISTRATIONS ERROR:", error);
+        res.status(500).json({
+            success: false,
+            message: "Database error",
+            error: error.message
+        });
+    }
+};
+
+// GET AVAILABLE SIMS
 const getAvailableSims = async (req, res) => {
     try {
-        // Accept either parameter key
         const id_sim_type = req.query.id_sim_type || req.query.sim_type_id;
 
         if (!id_sim_type) {
@@ -183,16 +234,16 @@ const createRegistration = async (req, res) => {
             });
         }
 
-        if (id_package) { 
+        if (id_package) {
             const [pkg] = await connection.query(
-                `SELECT id_package FROM packages WHERE id_package = ? AND is_active = 1 AND deleted_at IS NULL`, 
+                `SELECT id_package FROM packages WHERE id_package = ? AND is_active = 1 AND deleted_at IS NULL`,
                 [id_package]
-            ); 
+            );
             if (!pkg.length) {
                 await connection.rollback();
                 connection.release();
                 return res.status(404).json({ success: false, message: 'Package not found or inactive' });
-            } 
+            }
         }
 
         const [result] = await connection.query(`
@@ -226,33 +277,12 @@ const createRegistration = async (req, res) => {
         );
         if (reservedStatus.length) {
             await connection.query(
-                `UPDATE sim_cards SET id_sim_status = ? WHERE id_sim = ?`, 
+                `UPDATE sim_cards SET id_sim_status = ? WHERE id_sim = ?`,
                 [reservedStatus[0].id_sim_status, id_sim]
             );
         }
 
-        await createAuditLog({
-            req,
-            action: "CREATE",
-            targetEntity: "registrations",
-            targetId: newId,
-            metadata: {
-                id_customer,
-                id_sim,
-                id_agent,
-                id_registration_status
-            }
-        });
-
         const adminUserIds = await getAdminUserIds(connection);
-        if (adminUserIds.length > 0) {
-            await createNotificationsForUsers({
-                userIds: adminUserIds,
-                title: "New Registration",
-                message: `Registration #${newId} is waiting for review.`,
-                type: "registration"
-            });
-        }
 
         const [rows] = await connection.query(`
             SELECT 
@@ -290,6 +320,24 @@ const createRegistration = async (req, res) => {
 
         await connection.commit();
         connection.release();
+
+        // Non-blocking side-effects after successful commit
+        await createAuditLog({
+            req,
+            action: "CREATE",
+            targetEntity: "registrations",
+            targetId: newId,
+            metadata: { id_customer, id_sim, id_agent, id_registration_status }
+        }).catch(err => console.error("Audit Log Error:", err));
+
+        if (adminUserIds.length > 0) {
+            await createNotificationsForUsers({
+                userIds: adminUserIds,
+                title: "New Registration",
+                message: `Registration #${newId} is waiting for review.`,
+                type: "registration"
+            }).catch(err => console.error("Notification Error:", err));
+        }
 
         res.status(201).json({
             success: true,
@@ -334,7 +382,6 @@ const updateRegistration = async (req, res) => {
 
         const statusId = Number(id_registration_status);
 
-        // Enforce authorization prior to mutation
         if ([2, 3].includes(statusId) && Number(req.user?.id_role) !== 1) {
             connection.release();
             return res.status(403).json({ success: false, message: "Only Admin can approve or reject registrations" });
@@ -376,7 +423,7 @@ const updateRegistration = async (req, res) => {
             id_sim,
             id_agent,
             reviewed_by || null,
-            id_registration_status,
+            statusId,
             notes || null,
             id
         ]);
@@ -389,54 +436,15 @@ const updateRegistration = async (req, res) => {
                 [id_sim]
             );
             auditAction = "APPROVE";
-
-            if (id_agent) {
-                await createNotification({
-                    idUser: id_agent,
-                    title: "Registration Approved",
-                    message: `Registration #${id} has been approved.`,
-                    type: "success"
-                });
-            }
-
-            const adminUserIds = await getAdminUserIds(connection);
-            if (adminUserIds.length > 0) {
-                await createNotificationsForUsers({
-                    userIds: adminUserIds,
-                    title: "Registration Approved",
-                    message: `Registration #${id} has been approved.`,
-                    type: "success"
-                });
-            }
         } else if (statusId === 3) {
             await connection.query(
                 `UPDATE sim_cards SET id_sim_status = 1, updated_at = NOW() WHERE id_sim = ?`,
                 [id_sim]
             );
             auditAction = "REJECT";
-
-            if (id_agent) {
-                await createNotification({
-                    idUser: id_agent,
-                    title: "Registration Rejected",
-                    message: `Registration #${id} has been rejected.`,
-                    type: "error"
-                });
-            }
         }
 
-        await createAuditLog({
-            req,
-            action: auditAction,
-            targetEntity: "registrations",
-            targetId: id,
-            metadata: {
-                id_customer,
-                id_sim,
-                id_agent,
-                id_registration_status: statusId
-            }
-        });
+        const adminUserIds = await getAdminUserIds(connection);
 
         const [rows] = await connection.query(`
             SELECT 
@@ -474,6 +482,40 @@ const updateRegistration = async (req, res) => {
 
         await connection.commit();
         connection.release();
+
+        // Non-blocking notifications & audit logs
+        createAuditLog({
+            req,
+            action: auditAction,
+            targetEntity: "registrations",
+            targetId: id,
+            metadata: { id_customer, id_sim, id_agent, id_registration_status: statusId }
+        }).catch(err => console.error("Audit log failed:", err));
+
+        if (statusId === 2 && id_agent) {
+            createNotification({
+                idUser: id_agent,
+                title: "Registration Approved",
+                message: `Registration #${id} has been approved.`,
+                type: "success"
+            }).catch(err => console.error(err));
+
+            if (adminUserIds.length > 0) {
+                createNotificationsForUsers({
+                    userIds: adminUserIds,
+                    title: "Registration Approved",
+                    message: `Registration #${id} has been approved.`,
+                    type: "success"
+                }).catch(err => console.error(err));
+            }
+        } else if (statusId === 3 && id_agent) {
+            createNotification({
+                idUser: id_agent,
+                title: "Registration Rejected",
+                message: `Registration #${id} has been rejected.`,
+                type: "error"
+            }).catch(err => console.error(err));
+        }
 
         res.json({
             success: true,
@@ -577,16 +619,16 @@ const reviewRegistration = async (req, res, approved) => {
             WHERE id_sim = ?
         `, [simStatus, rows[0].id_sim]);
 
-        await createAuditLog({
+        await connection.commit(); 
+        connection.release();
+
+        createAuditLog({
             req,
             action: approved ? 'APPROVE' : 'REJECT',
             targetEntity: 'registrations',
             targetId: id,
             metadata: { id_sim: rows[0].id_sim }
-        });
-
-        await connection.commit(); 
-        connection.release();
+        }).catch(e => console.error("Audit Log Error:", e));
 
         res.json({
             success: true,
@@ -603,6 +645,8 @@ const approveRegistration = (req, res) => reviewRegistration(req, res, true);
 const rejectRegistration = (req, res) => reviewRegistration(req, res, false);
 
 module.exports = {
+    getAllRegistrations,
+    getAvailableSims,
     getRegistrationById,
     createRegistration,
     updateRegistration,
