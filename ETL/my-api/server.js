@@ -64,7 +64,7 @@ console.log("3. rolesRoutes:", typeof rolesRoutes);
 const app = express();
 
 app.use(cors({
-    origin: "http://eltsimu.vercel.app"
+    origin: "https://eltsimu.vercel.app"
 }));
 
 app.use(express.json({ limit: "10mb" }));
