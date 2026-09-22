@@ -1,4 +1,4 @@
-const API_URL = " https://eltsimu.onrender.com";
+const API_URL = "https://eltsimu.onrender.com";
 
 async function refreshAccessToken() {
   const refreshToken = localStorage.getItem("refresh_token");
