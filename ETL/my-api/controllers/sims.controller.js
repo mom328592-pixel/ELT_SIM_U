@@ -526,9 +526,72 @@ const deleteSim = async (req, res) => {
         });
     }
 };
+// =========================
+// GET AVAILABLE SIM CARDS
+// =========================
+const getAvailableSims = async (req, res) => {
+    try {
+        const [rows] = await pool.query(`
+            SELECT
+                s.id_sim,
+                s.iccid,
+                s.imsi,
+                s.qr_code,
+                s.id_package,
+                p.package_name,
+                p.duration_days AS package_duration_days,
+                p.price AS package_price,
+                p.currency AS package_currency,
+                s.package,
+                s.phone_number,
+                s.id_sim_type,
+                st.sim_type,
+                s.id_sim_status,
+                ss.sim_status,
+                s.imported_at,
+                s.link_url,
+                s.created_at,
+                s.updated_at
+            FROM sim_cards s
+
+            LEFT JOIN packages p
+                ON s.id_package = p.id_package
+
+            LEFT JOIN sim_types st
+                ON s.id_sim_type = st.id_sim_type
+
+            LEFT JOIN sim_status ss
+                ON s.id_sim_status = ss.id_sim_status
+
+            WHERE s.deleted_at IS NULL
+              AND (
+                  LOWER(ss.sim_status) = 'available'
+                  OR LOWER(ss.sim_status) = 'ວ່າງ'
+              )
+
+            ORDER BY s.id_sim ASC
+        `);
+
+        res.json({
+            success: true,
+            message: "Available SIM cards retrieved successfully",
+            data: rows
+        });
+
+    } catch (error) {
+        console.error("GET /public/sims/available ERROR:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Database error",
+            error: error.message
+        });
+    }
+};
 
 
 module.exports = {
+    getAvailableSims,
     getAllSims,
     getSimById,
     createSim,
