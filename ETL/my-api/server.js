@@ -67,6 +67,34 @@ const allowedOrigins = [
   "https://eltsimu.vercel.app"
 ];
 
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests without an Origin header
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // Production Vercel
+      if (origin === "https://eltsimu.vercel.app") {
+        return callback(null, true);
+      }
+
+      // Vercel Preview deployments
+      const isVercelPreview =
+        /^https:\/\/eltsimu-[a-z0-9-]+\.vercel\.app$/.test(origin);
+
+      if (isVercelPreview) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
+
+    credentials: true
+  })
+);
+
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) {
