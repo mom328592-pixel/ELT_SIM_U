@@ -63,8 +63,27 @@ console.log("3. rolesRoutes:", typeof rolesRoutes);
 
 const app = express();
 
+const allowedOrigins = [
+  "https://eltsimu.vercel.app"
+];
+
 app.use(cors({
-    origin: "https://eltsimu.vercel.app"
+  origin: function (origin, callback) {
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    const isAllowed =
+      allowedOrigins.includes(origin) ||
+      /^https:\/\/eltsimu-[a-z0-9-]+-bik2\.vercel\.app$/.test(origin);
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true
 }));
 
 app.use(express.json({ limit: "10mb" }));
