@@ -79,7 +79,7 @@ function SimManagement() {
       setError("");
 
       const [simsResponse, simTypesResponse, simStatusesResponse] = await Promise.all([
-        apiFetch("/sim"),
+        apiFetch("/sims"),
         apiFetch("/sim-types"),
         apiFetch("/sim-status"),
       ]);
@@ -189,7 +189,7 @@ function SimManagement() {
 
         alert("SIM updated successfully");
       } else {
-        await apiFetch("/sim", {
+        await apiFetch("/sims", {
           method: "POST",
           body: JSON.stringify(payload),
         });

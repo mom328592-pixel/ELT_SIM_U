@@ -63,7 +63,7 @@ function Registrations() {
       ] = await Promise.all([
         apiFetch("/registrations"),
         apiFetch("/customers"),
-        apiFetch("/sim"),
+        apiFetch("/sims"),
         apiFetch("/agents"),
         apiFetch("/registration-status"),
       ]);
