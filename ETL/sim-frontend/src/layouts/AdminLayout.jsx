@@ -1,6 +1,5 @@
 import { useState } from "react";
 import Sidebar from "../components/Sidebar";
-import NotificationBell from "../components/NotificationBell";
 
 function AdminLayout({
   user,
@@ -54,7 +53,6 @@ function AdminLayout({
           <div className="topbar-right">
 
             {/* Notification */}
-            <NotificationBell />
 
             {/* User */}
             <div className="topbar-user">

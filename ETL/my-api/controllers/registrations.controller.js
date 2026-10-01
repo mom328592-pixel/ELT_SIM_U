@@ -1,9 +1,5 @@
 const pool = require("../db");
 const { createAuditLog } = require("../utils/audit");
-const {
-    createNotification,
-    createNotificationsForUsers
-} = require("./notifications.controller");
 
 // Helper function to fetch active admin IDs
 const getAdminUserIds = async (connection) => {
@@ -330,14 +326,6 @@ const createRegistration = async (req, res) => {
             metadata: { id_customer, id_sim, id_agent, id_registration_status }
         }).catch(err => console.error("Audit Log Error:", err));
 
-        if (adminUserIds.length > 0) {
-            await createNotificationsForUsers({
-                userIds: adminUserIds,
-                title: "New Registration",
-                message: `Registration #${newId} is waiting for review.`,
-                type: "registration"
-            }).catch(err => console.error("Notification Error:", err));
-        }
 
         res.status(201).json({
             success: true,
@@ -483,7 +471,7 @@ const updateRegistration = async (req, res) => {
         await connection.commit();
         connection.release();
 
-        // Non-blocking notifications & audit logs
+       
         createAuditLog({
             req,
             action: auditAction,
@@ -500,14 +488,8 @@ const updateRegistration = async (req, res) => {
                 type: "success"
             }).catch(err => console.error(err));
 
-            if (adminUserIds.length > 0) {
-                createNotificationsForUsers({
-                    userIds: adminUserIds,
-                    title: "Registration Approved",
-                    message: `Registration #${id} has been approved.`,
-                    type: "success"
-                }).catch(err => console.error(err));
-            }
+            
+            
         } else if (statusId === 3 && id_agent) {
             createNotification({
                 idUser: id_agent,

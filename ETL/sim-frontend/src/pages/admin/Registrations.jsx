@@ -135,27 +135,8 @@ function Registrations() {
     setSelectedRegistration(null);
   };
 
-  // =========================
-  // NOTIFICATIONS HELPER
-  // =========================
-  const createNotification = (title, message, type = "info") => {
-    const saved = localStorage.getItem("notifications");
-    const notifications = saved ? JSON.parse(saved) : [];
+  
 
-    notifications.unshift({
-      id: Date.now(),
-      type,
-      title,
-      message,
-      time: new Date().toLocaleString(),
-      read: false,
-    });
-
-    localStorage.setItem(
-      "notifications",
-      JSON.stringify(notifications.slice(0, 50))
-    );
-  };
 
   // =========================
   // CREATE / UPDATE

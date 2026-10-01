@@ -128,7 +128,7 @@ CREATE TABLE `sim_status` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id_sim_status`) USING BTREE,
-  UNIQUE INDEX `sim_status`(`status_name` ASC) USING BTREE
+  UNIQUE INDEX `sim_status`(`sim_status` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------

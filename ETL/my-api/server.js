@@ -42,7 +42,6 @@ const auditLogsRoutes = require("./routes/audit-logs.routes");
 const statusUsersRoutes = require("./routes/status-users.routes");
 const reportsRoutes = require("./routes/reports.routes");
 const exportRoutes = require("./routes/export.routes");
-const notificationsRoutes = require("./routes/notifications.routes");
 const simFileHistoryRoutes = require("./routes/sim-file-history.routes");
 const simTypesRoutes = require("./routes/sim-types.routes");
 const simStatusRoutes = require("./routes/sim-status.routes");
@@ -309,11 +308,6 @@ app.use(
   exportRoutes
 );
 
-app.use(
-  "/notifications",
-  authenticateToken,
-  notificationsRoutes
-);
 
 app.use(
   "/packages",

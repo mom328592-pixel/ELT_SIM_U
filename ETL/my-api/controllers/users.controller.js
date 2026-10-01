@@ -2,7 +2,8 @@ const pool = require("../db");
 const bcrypt = require("bcryptjs");
 const { createAuditLog } = require("../utils/audit");
 
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+const PASSWORD_REGEX =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
 // =========================
 // GET ALL USERS
@@ -132,7 +133,7 @@ const createUser = async (req, res) => {
       return res.status(400).json({
         success: false,
         message:
-          "Password must be at least 8 characters long and contain uppercase, lowercase, and a number",
+    "Password must be at least 8 characters long and contain uppercase, lowercase, a number, and a special character",
       });
     }
 
