@@ -1,32 +1,59 @@
 const pool = require("../db");
 
-// ======================================
-// GET AGENTS + SIM TYPES
-// ======================================
+
+// ======================================================
+// GET REGISTRATION OPTIONS BY AGENT TOKEN
+// ======================================================
 const getRegistrationOptions = async (req, res) => {
     try {
+        const { agentToken } = req.params;
+
+        if (!agentToken) {
+            return res.status(400).json({
+                success: false,
+                message: "Agent token is required"
+            });
+        }
+
         const [agents] = await pool.query(`
             SELECT
                 id_agent,
-                agent_name
+                agent_name,
+                contact_phone,
+                contact_email
             FROM agents
-            WHERE deleted_at IS NULL
-            ORDER BY agent_name ASC
+            WHERE public_token = ?
+              AND deleted_at IS NULL
+            LIMIT 1
+        `, [agentToken]);
+
+        if (!agents.length) {
+            return res.status(404).json({
+                success: false,
+                message: "Invalid or inactive agent link"
+            });
+        }
+
+        const [simTypes] = await pool.query(`
+            SELECT
+                id_sim_type,
+                sim_type,
+                description
+            FROM sim_types
+            ORDER BY id_sim_type ASC
         `);
 
-        const [simTypes] = await pool.query(`SELECT id_sim_type, sim_type, description FROM sim_types ORDER BY id_sim_type ASC`);
         res.json({
             success: true,
-            message: "Registration options retrieved successfully",
             data: {
-                agents,
+                agent: agents[0],
                 sim_types: simTypes
             }
         });
 
     } catch (error) {
         console.error(
-            "GET /public/registration-options ERROR:",
+            "GET REGISTRATION OPTIONS ERROR:",
             error
         );
 
@@ -38,109 +65,39 @@ const getRegistrationOptions = async (req, res) => {
 };
 
 
-// ======================================
-// GET AVAILABLE SIM
-// ======================================
-const getAvailableSims = async (req, res) => {
-    try {
-        const { id_sim_type } = req.query;
-
-        if (!id_sim_type) {
-            return res.status(400).json({
-                success: false,
-                message: "SIM type is required"
-            });
-        }
-
-        const [rows] = await pool.query(
-            `
-            SELECT
-                s.id_sim,
-                s.phone_number,
-                s.iccid,
-                s.imsi,
-                s.id_sim_type,
-                st.sim_type,
-                s.id_package,
-                p.package_name,
-                p.duration_days AS package_duration_days,
-                p.price AS package_price,
-                p.currency AS package_currency,
-                s.package,
-                s.qr_code,
-                s.link_url
-            FROM sim_cards s
-
-            INNER JOIN sim_types st
-                ON s.id_sim_type = st.id_sim_type
-
-            INNER JOIN sim_status ss
-                ON s.id_sim_status = ss.id_sim_status
-
-            LEFT JOIN packages p
-                ON s.id_package = p.id_package
-
-            WHERE s.id_sim_type = ?
-              AND s.deleted_at IS NULL
-              AND ss.sim_status = 'Available'
-
-            ORDER BY s.id_sim ASC
-            `,
-            [id_sim_type]
-        );
-
-        res.json({
-            success: true,
-            message: "Available SIMs retrieved successfully",
-            data: rows
-        });
-
-    } catch (error) {
-        console.error(
-            "GET /public/sims/available ERROR:",
-            error
-        );
-
-        res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        });
-    }
-};
-
-
-// ======================================
-// CREATE CUSTOMER REGISTRATION
-// ======================================
+// ======================================================
+// CREATE PUBLIC REGISTRATION
+// ======================================================
 const createPublicRegistration = async (req, res) => {
     const connection = await pool.getConnection();
 
     try {
         const {
-            id_agent,
-            id_sim,
+            agent_token,
+            id_sim_type,
             first_name,
             last_name,
             passport_number,
             nationality,
             date_of_birth,
             passport_expiry_date,
+            phone_number
         } = req.body;
 
-        // ------------------------------
+        // ------------------------------------------------
         // VALIDATION
-        // ------------------------------
-        if (!id_agent) {
+        // ------------------------------------------------
+        if (!agent_token) {
             return res.status(400).json({
                 success: false,
-                message: "Agent is required"
+                message: "Agent token is required"
             });
         }
 
-        if (!id_sim) {
+        if (!id_sim_type) {
             return res.status(400).json({
                 success: false,
-                message: "SIM is required"
+                message: "SIM type is required"
             });
         }
 
@@ -165,119 +122,138 @@ const createPublicRegistration = async (req, res) => {
             });
         }
 
+        // ------------------------------------------------
+        // BEGIN TRANSACTION
+        // ------------------------------------------------
         await connection.beginTransaction();
 
-        // ------------------------------
-        // CHECK AGENT
-        // ------------------------------
-        const [agentRows] = await connection.query(
-            `
-            SELECT id_agent
-            FROM agents
-            WHERE id_agent = ?
-              AND deleted_at IS NULL
-            `,
-            [id_agent]
-        );
 
-        if (agentRows.length === 0) {
+        // ------------------------------------------------
+        // FIND AGENT FROM TOKEN
+        // ------------------------------------------------
+        const [agentRows] = await connection.query(`
+            SELECT
+                id_agent,
+                agent_name
+            FROM agents
+            WHERE public_token = ?
+              AND deleted_at IS NULL
+            LIMIT 1
+        `, [agent_token]);
+
+        if (!agentRows.length) {
             await connection.rollback();
             connection.release();
 
             return res.status(404).json({
                 success: false,
-                message: "Agent not found"
+                message: "Invalid or inactive agent link"
             });
         }
 
-        // ------------------------------
-        // CHECK SIM + LOCK
-        // ------------------------------
-        const [simRows] = await connection.query(
-            `
+        const agent = agentRows[0];
+
+
+        // ------------------------------------------------
+        // FIND SIM TYPE
+        // ------------------------------------------------
+        const [simTypeRows] = await connection.query(`
             SELECT
-                s.id_sim,
-                s.id_sim_status,
-                s.id_sim_type,
-                s.phone_number,
-                s.qr_code,
-                s.link_url,
-                s.activation_code,
-                ss.sim_status
-            FROM sim_cards s
+                id_sim_type,
+                sim_type
+            FROM sim_types
+            WHERE id_sim_type = ?
+            LIMIT 1
+        `, [id_sim_type]);
 
-            INNER JOIN sim_status ss
-                ON s.id_sim_status = ss.id_sim_status
-
-            WHERE s.id_sim = ?
-              AND s.deleted_at IS NULL
-            FOR UPDATE
-            `,
-            [id_sim]
-        );
-
-        if (simRows.length === 0) {
+        if (!simTypeRows.length) {
             await connection.rollback();
             connection.release();
 
             return res.status(404).json({
                 success: false,
-                message: "SIM not found"
+                message: "SIM type not found"
+            });
+        }
+
+
+        // ------------------------------------------------
+        // LOCK ONE AVAILABLE SIM
+        // ------------------------------------------------
+        const [simRows] = await connection.query(`
+            SELECT
+                s.id_sim,
+                s.phone_number,
+                s.iccid,
+                s.imsi,
+                s.id_sim_type,
+                s.id_package,
+                s.qr_code,
+                s.activation_code,
+                s.link_url,
+                ss.status_name AS sim_status,
+                p.package_name,
+                p.duration_days,
+                p.price,
+                p.currency
+            FROM sim_cards s
+            INNER JOIN sim_status ss
+                ON s.id_sim_status = ss.id_sim_status
+            LEFT JOIN packages p
+                ON s.id_package = p.id_package
+            WHERE s.id_sim_type = ?
+              AND LOWER(ss.status_name) = 'available'
+              AND s.deleted_at IS NULL
+            ORDER BY s.id_sim ASC
+            LIMIT 1
+            FOR UPDATE
+        `, [id_sim_type]);
+
+        if (!simRows.length) {
+            await connection.rollback();
+            connection.release();
+
+            return res.status(409).json({
+                success: false,
+                message: "No SIM is available for this SIM type"
             });
         }
 
         const sim = simRows[0];
 
-        if (sim.sim_status !== "Available") {
+
+        // ------------------------------------------------
+        // PACKAGE IS ASSIGNED BY ADMIN
+        // CUSTOMER DOES NOT CHOOSE PACKAGE
+        // ------------------------------------------------
+        if (!sim.id_package) {
             await connection.rollback();
             connection.release();
 
             return res.status(409).json({
                 success: false,
-                message: `SIM is not available. Current status: ${sim.sim_status}`
+                message: "This SIM does not have a package assigned"
             });
         }
 
-        // Package is assigned to the SIM by Admin. Customer does not choose or submit a package.
-        const [packageRows] = await connection.query(
-            `SELECT id_package, package_name, duration_days, price, currency
-             FROM packages
-             WHERE id_package = (SELECT id_package FROM sim_cards WHERE id_sim = ?)
-               AND is_active = 1
-               AND deleted_at IS NULL
-             LIMIT 1`,
-            [id_sim]
-        );
 
-        if (packageRows.length === 0) {
-            await connection.rollback();
-            connection.release();
-            return res.status(409).json({
-                success: false,
-                message: "This SIM does not have an active package assigned"
-            });
-        }
-
-        const simPackage = packageRows[0];
-
-        // ------------------------------
-        // CHECK PENDING REGISTRATION
-        // ------------------------------
-        const [pendingRows] = await connection.query(
-            `
-            SELECT r.id_registration
+        // ------------------------------------------------
+        // CHECK PENDING REGISTRATION FOR SIM
+        // ------------------------------------------------
+        const [pendingRows] = await connection.query(`
+            SELECT
+                r.id_registration
             FROM registrations r
-
             INNER JOIN registrations_status rs
-                ON r.id_registration_status = rs.id_registration_status
-
+                ON r.id_registration_status =
+                   rs.id_registration_status
             WHERE r.id_sim = ?
-              AND rs.status_name = 'Pending'
-            `,
-            [id_sim]
-        );
+              AND LOWER(rs.status_name) = 'pending'
+              AND r.deleted_at IS NULL
+            LIMIT 1
+        `, [sim.id_sim]);
 
-        if (pendingRows.length > 0) {
+        if (pendingRows.length) {
             await connection.rollback();
             connection.release();
 
@@ -287,52 +263,67 @@ const createPublicRegistration = async (req, res) => {
             });
         }
 
-        // ------------------------------
-        // CHECK CUSTOMER BY PASSPORT
-        // ------------------------------
+
+        // ------------------------------------------------
+        // FIND CUSTOMER BY PASSPORT
+        // ------------------------------------------------
         let customerId;
 
-        const [customerRows] = await connection.query(
-            `
-            SELECT id_customer
+        const [customerRows] = await connection.query(`
+            SELECT
+                id_customer
             FROM customers
             WHERE passport_number = ?
             LIMIT 1
-            `,
-            [passport_number.trim()]
-        );
+        `, [passport_number.trim()]);
 
-        if (customerRows.length > 0) {
+
+        // ------------------------------------------------
+        // PASSPORT PHOTO
+        // ------------------------------------------------
+        let passportPhoto = null;
+
+        if (req.file) {
+            passportPhoto = `/uploads/${req.file.filename}`;
+        }
+
+
+        // ------------------------------------------------
+        // UPDATE EXISTING CUSTOMER
+        // ------------------------------------------------
+        if (customerRows.length) {
+
             customerId = customerRows[0].id_customer;
 
-            // Update customer info
-            await connection.query(
-                `
+            await connection.query(`
                 UPDATE customers
                 SET
                     first_name = ?,
                     last_name = ?,
                     nationality = ?,
                     date_of_birth = ?,
-                    passport_expiry_date = ?
+                    passport_expiry_date = ?,
+                    phone_number = ?,
+                    passport_photo = COALESCE(?, passport_photo),
+                    updated_at = NOW()
                 WHERE id_customer = ?
-                `,
-                [
-                    first_name.trim(),
-                    last_name.trim(),
-                    nationality?.trim() || null,
-                    date_of_birth || null,
-                    passport_expiry_date || null,
-                    customerId
-                ]
-            );
+            `, [
+                first_name.trim(),
+                last_name.trim(),
+                nationality?.trim() || null,
+                date_of_birth || null,
+                passport_expiry_date || null,
+                phone_number?.trim() || null,
+                passportPhoto,
+                customerId
+            ]);
 
         } else {
-            // ------------------------------
+
+            // ------------------------------------------------
             // CREATE CUSTOMER
-            // ------------------------------
-            const [customerResult] = await connection.query(
-                `
+            // ------------------------------------------------
+            const [customerResult] = await connection.query(`
                 INSERT INTO customers (
                     first_name,
                     last_name,
@@ -340,35 +331,37 @@ const createPublicRegistration = async (req, res) => {
                     nationality,
                     date_of_birth,
                     passport_expiry_date,
+                    phone_number,
+                    passport_photo
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                `,
-                [
-                    first_name.trim(),
-                    last_name.trim(),
-                    passport_number.trim(),
-                    nationality?.trim() || null,
-                    date_of_birth || null,
-                    passport_expiry_date || null,
-                ]
-            );
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                first_name.trim(),
+                last_name.trim(),
+                passport_number.trim(),
+                nationality?.trim() || null,
+                date_of_birth || null,
+                passport_expiry_date || null,
+                phone_number?.trim() || null,
+                passportPhoto
+            ]);
 
             customerId = customerResult.insertId;
         }
 
-        // ------------------------------
-        // FIND PENDING STATUS
-        // ------------------------------
-        const [statusRows] = await connection.query(
-            `
-            SELECT id_registration_status
-            FROM registrations_status
-            WHERE status_name = 'Pending'
-            LIMIT 1
-            `
-        );
 
-        if (statusRows.length === 0) {
+        // ------------------------------------------------
+        // FIND PENDING STATUS
+        // ------------------------------------------------
+        const [statusRows] = await connection.query(`
+            SELECT
+                id_registration_status
+            FROM registrations_status
+            WHERE LOWER(status_name) = 'pending'
+            LIMIT 1
+        `);
+
+        if (!statusRows.length) {
             await connection.rollback();
             connection.release();
 
@@ -378,63 +371,109 @@ const createPublicRegistration = async (req, res) => {
             });
         }
 
-        const pendingStatusId = statusRows[0].id_registration_status;
+        const pendingStatusId =
+            statusRows[0].id_registration_status;
 
-        // ------------------------------
+
+        // ------------------------------------------------
         // CREATE REGISTRATION
-        // ------------------------------
-        const [registrationResult] = await connection.query(
-            `
+        // ------------------------------------------------
+        const [registrationResult] = await connection.query(`
             INSERT INTO registrations (
                 id_registration_status,
                 id_customer,
                 id_sim,
                 id_agent,
                 id_package,
+                registered_at,
                 notes
             )
-            VALUES (?, ?, ?, ?, ?, ?)
-            `,
-            [
-                pendingStatusId,
-                customerId,
-                id_sim,
-                id_agent,
-                simPackage.id_package,
-                "Customer self registration"
-            ]
-        );
+            VALUES (?, ?, ?, ?, ?, NOW(), ?)
+        `, [
+            pendingStatusId,
+            customerId,
+            sim.id_sim,
+            agent.id_agent,
+            sim.id_package,
+            "Customer self registration"
+        ]);
 
-        // Reserve the SIM while the registration is waiting for admin review.
-        const [reservedStatus] = await connection.query(`SELECT id_sim_status FROM sim_status WHERE sim_status='Reserved' LIMIT 1`);
+
+        // ------------------------------------------------
+        // RESERVE SIM
+        // ------------------------------------------------
+        const [reservedStatus] = await connection.query(`
+            SELECT
+                id_sim_status
+            FROM sim_status
+            WHERE LOWER(status_name) = 'reserved'
+            LIMIT 1
+        `);
+
         if (reservedStatus.length) {
-            await connection.query(`UPDATE sim_cards SET id_sim_status=? WHERE id_sim=?`, [reservedStatus[0].id_sim_status, id_sim]);
+
+            await connection.query(`
+                UPDATE sim_cards
+                SET
+                    id_sim_status = ?,
+                    updated_at = NOW()
+                WHERE id_sim = ?
+            `, [
+                reservedStatus[0].id_sim_status,
+                sim.id_sim
+            ]);
+
         }
 
+
+        // ------------------------------------------------
+        // COMMIT
+        // ------------------------------------------------
         await connection.commit();
         connection.release();
 
-        res.status(201).json({
+
+        // ------------------------------------------------
+        // RESPONSE
+        // ------------------------------------------------
+        return res.status(201).json({
             success: true,
-            message: "Customer registration submitted successfully",
+            message: "Registration submitted successfully",
             data: {
-                id_registration: registrationResult.insertId,
-                id_customer: customerId,
-                id_sim: Number(id_sim),
-                id_agent: Number(id_agent),
-                id_package: simPackage.id_package,
-                package_name: simPackage.package_name,
-                package_duration_days: simPackage.duration_days,
-                package_price: simPackage.price,
-                package_currency: simPackage.currency,
-                qr_code: sim.qr_code || null,
-                activation_code: sim.activation_code || null,
-                link_url: sim.link_url || null,
+                id_registration:
+                    registrationResult.insertId,
+
+                id_customer:
+                    customerId,
+
+                id_agent:
+                    agent.id_agent,
+
+                agent_name:
+                    agent.agent_name,
+
+                sim: {
+                    id_sim: sim.id_sim,
+                    phone_number: sim.phone_number,
+                    iccid: sim.iccid,
+                    imsi: sim.imsi,
+                    qr_code: null,
+                    activation_code: null,
+                    link_url: null,
+                    package_name: sim.package_name,
+                    duration_days: sim.duration_days,
+                    price: sim.price,
+                    currency: sim.currency,
+                    sim_type: sim.sim_type,
+                    status: "Pending"
+                },
+
                 status: "Pending"
             }
         });
 
     } catch (error) {
+
         try {
             await connection.rollback();
         } catch {}
@@ -442,13 +481,14 @@ const createPublicRegistration = async (req, res) => {
         connection.release();
 
         console.error(
-            "POST /public/registrations ERROR:",
+            "PUBLIC REGISTRATION ERROR:",
             error
         );
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
-            message: "Unable to submit registration"
+            message: "Unable to submit registration",
+            error: error.message
         });
     }
 };
@@ -456,6 +496,5 @@ const createPublicRegistration = async (req, res) => {
 
 module.exports = {
     getRegistrationOptions,
-    getAvailableSims,
     createPublicRegistration
 };

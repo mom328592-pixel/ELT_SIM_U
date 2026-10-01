@@ -2,32 +2,35 @@ const express = require("express");
 
 const router = express.Router();
 
+const upload = require(
+    "../middlewares/passport-upload.middleware"
+);
+
 const {
     getRegistrationOptions,
-    getAvailableSims,
     createPublicRegistration
 } = require(
     "../controllers/public-registration.controller"
 );
 
 
-// GET options
+// ======================================================
+// GET REGISTRATION OPTIONS
+// ======================================================
+
 router.get(
-    "/registration-options",
+    "/registration-options/:agentToken",
     getRegistrationOptions
 );
 
 
-// GET available SIM
-router.get(
-    "/sims/available",
-    getAvailableSims
-);
+// ======================================================
+// CREATE REGISTRATION
+// ======================================================
 
-
-// CREATE
 router.post(
     "/registrations",
+    upload.single("passport"),
     createPublicRegistration
 );
 

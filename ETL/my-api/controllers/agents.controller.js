@@ -1,8 +1,29 @@
+const crypto = require("crypto");
 const pool = require("../db");
 
-// =========================
+const FRONTEND_URL =
+    process.env.FRONTEND_URL || "https://eltsimu.vercel.app";
+
+
+// ======================================================
+// CREATE PUBLIC TOKEN
+// ======================================================
+const generatePublicToken = () => {
+    return crypto.randomBytes(32).toString("hex");
+};
+
+
+// ======================================================
+// PUBLIC URL
+// ======================================================
+const getPublicUrl = (token) => {
+    return `${FRONTEND_URL.replace(/\/$/, "")}/customer-registration/${token}`;
+};
+
+
+// ======================================================
 // GET ALL AGENTS
-// =========================
+// ======================================================
 const getAllAgents = async (req, res) => {
     try {
         const [rows] = await pool.query(`
@@ -12,6 +33,12 @@ const getAllAgents = async (req, res) => {
                 a.contact_phone,
                 a.contact_email,
                 a.address,
+                a.public_token,
+                CONCAT(
+                    ?,
+                    '/customer-registration/',
+                    a.public_token
+                ) AS public_url,
                 a.created_by,
                 u.username AS created_by_username,
                 a.created_at,
@@ -21,7 +48,7 @@ const getAllAgents = async (req, res) => {
                 ON a.created_by = u.id_user
             WHERE a.deleted_at IS NULL
             ORDER BY a.id_agent DESC
-        `);
+        `, [FRONTEND_URL.replace(/\/$/, "")]);
 
         res.json({
             success: true,
@@ -30,24 +57,20 @@ const getAllAgents = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(
-            "GET /agents ERROR:",
-            error
-        );
+        console.error("GET /agents ERROR:", error);
 
         res.status(500).json({
             success: false,
-            message: "Database error",
-            error: error.message
+            message: "Database error"
         });
     }
 };
 
 
-// =========================
+// ======================================================
 // GET AGENT BY ID
-// =========================
-async function getAgentById(req, res) {
+// ======================================================
+const getAgentById = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -58,6 +81,12 @@ async function getAgentById(req, res) {
                 a.contact_phone,
                 a.contact_email,
                 a.address,
+                a.public_token,
+                CONCAT(
+                    ?,
+                    '/customer-registration/',
+                    a.public_token
+                ) AS public_url,
                 a.created_by,
                 u.username AS created_by_username,
                 a.created_at,
@@ -67,9 +96,12 @@ async function getAgentById(req, res) {
                 ON a.created_by = u.id_user
             WHERE a.id_agent = ?
               AND a.deleted_at IS NULL
-        `, [id]);
+        `, [
+            FRONTEND_URL.replace(/\/$/, ""),
+            id
+        ]);
 
-        if (rows.length === 0) {
+        if (!rows.length) {
             return res.status(404).json({
                 success: false,
                 message: "Agent not found"
@@ -78,25 +110,23 @@ async function getAgentById(req, res) {
 
         res.json({
             success: true,
-            message: "Agent retrieved successfully",
             data: rows[0]
         });
 
     } catch (error) {
-        console.error("GET /agents/:id ERROR:", error);
+        console.error("GET AGENT ERROR:", error);
 
         res.status(500).json({
             success: false,
-            message: "Database error",
-            error: error.message
+            message: "Database error"
         });
     }
-}
+};
 
 
-// =========================
+// ======================================================
 // CREATE AGENT
-// =========================
+// ======================================================
 const createAgent = async (req, res) => {
     try {
         const {
@@ -106,7 +136,7 @@ const createAgent = async (req, res) => {
             address
         } = req.body;
 
-        if (!agent_name) {
+        if (!agent_name?.trim()) {
             return res.status(400).json({
                 success: false,
                 message: "Agent name is required"
@@ -114,53 +144,51 @@ const createAgent = async (req, res) => {
         }
 
         const createdBy = req.user.id_user;
+        const publicToken = generatePublicToken();
 
-        const [result] = await pool.query(
-            `
+        const [result] = await pool.query(`
             INSERT INTO agents (
                 agent_name,
                 contact_phone,
                 contact_email,
                 address,
+                public_token,
                 created_by
             )
-            VALUES (?, ?, ?, ?, ?)
-            `,
-            [
-                agent_name,
-                contact_phone || null,
-                contact_email || null,
-                address || null,
-                createdBy
-            ]
-        );
+            VALUES (?, ?, ?, ?, ?, ?)
+        `, [
+            agent_name.trim(),
+            contact_phone || null,
+            contact_email || null,
+            address || null,
+            publicToken,
+            createdBy
+        ]);
 
         res.status(201).json({
             success: true,
             message: "Agent created successfully",
             data: {
-                id_agent: result.insertId
+                id_agent: result.insertId,
+                public_token: publicToken,
+                public_url: getPublicUrl(publicToken)
             }
         });
 
     } catch (error) {
-        console.error(
-            "POST /agents ERROR:",
-            error
-        );
+        console.error("CREATE AGENT ERROR:", error);
 
         res.status(500).json({
             success: false,
-            message: "Database error",
-            error: error.message
+            message: "Database error"
         });
     }
 };
 
 
-// =========================
+// ======================================================
 // UPDATE AGENT
-// =========================
+// ======================================================
 const updateAgent = async (req, res) => {
     try {
         const { id } = req.params;
@@ -172,10 +200,10 @@ const updateAgent = async (req, res) => {
             address
         } = req.body;
 
-        if (!agent_name) {
+        if (!agent_name?.trim()) {
             return res.status(400).json({
                 success: false,
-                message: "agent_name is required"
+                message: "Agent name is required"
             });
         }
 
@@ -189,63 +217,89 @@ const updateAgent = async (req, res) => {
             WHERE id_agent = ?
               AND deleted_at IS NULL
         `, [
-            agent_name,
+            agent_name.trim(),
             contact_phone || null,
             contact_email || null,
             address || null,
             id
         ]);
 
-        if (result.affectedRows === 0) {
+        if (!result.affectedRows) {
             return res.status(404).json({
                 success: false,
                 message: "Agent not found"
             });
         }
 
-        const [rows] = await pool.query(`
-            SELECT
-                a.id_agent,
-                a.agent_name,
-                a.contact_phone,
-                a.contact_email,
-                a.address,
-                a.created_by,
-                u.username AS created_by_username,
-                a.created_at,
-                a.updated_at
-            FROM agents a
-            LEFT JOIN users u
-                ON a.created_by = u.id_user
-            WHERE a.id_agent = ?
-        `, [id]);
-
         res.json({
             success: true,
-            message: "Agent updated successfully",
-            data: rows[0]
+            message: "Agent updated successfully"
         });
 
     } catch (error) {
-        console.error("PUT /agents/:id ERROR:", error);
+        console.error("UPDATE AGENT ERROR:", error);
 
         res.status(500).json({
             success: false,
-            message: "Database error",
-            error: error.message
+            message: "Database error"
         });
     }
 };
 
 
-// =========================
+// ======================================================
+// REGENERATE PUBLIC LINK
+// ======================================================
+const regeneratePublicLink = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const publicToken = generatePublicToken();
+
+        const [result] = await pool.query(`
+            UPDATE agents
+            SET public_token = ?
+            WHERE id_agent = ?
+              AND deleted_at IS NULL
+        `, [
+            publicToken,
+            id
+        ]);
+
+        if (!result.affectedRows) {
+            return res.status(404).json({
+                success: false,
+                message: "Agent not found"
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Agent public link regenerated",
+            data: {
+                public_token: publicToken,
+                public_url: getPublicUrl(publicToken)
+            }
+        });
+
+    } catch (error) {
+        console.error("REGENERATE LINK ERROR:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Database error"
+        });
+    }
+};
+
+
+// ======================================================
 // DELETE AGENT
-// =========================
+// ======================================================
 const deleteAgent = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Soft delete
         const [result] = await pool.query(`
             UPDATE agents
             SET deleted_at = NOW()
@@ -253,7 +307,7 @@ const deleteAgent = async (req, res) => {
               AND deleted_at IS NULL
         `, [id]);
 
-        if (result.affectedRows === 0) {
+        if (!result.affectedRows) {
             return res.status(404).json({
                 success: false,
                 message: "Agent not found"
@@ -266,12 +320,11 @@ const deleteAgent = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("DELETE /agents/:id ERROR:", error);
+        console.error("DELETE AGENT ERROR:", error);
 
         res.status(500).json({
             success: false,
-            message: "Database error",
-            error: error.message
+            message: "Database error"
         });
     }
 };
@@ -282,5 +335,6 @@ module.exports = {
     getAgentById,
     createAgent,
     updateAgent,
+    regeneratePublicLink,
     deleteAgent
 };

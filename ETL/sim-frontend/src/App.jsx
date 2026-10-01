@@ -482,13 +482,13 @@ function App() {
             Public - no Admin Login required
         ================================================== */}
         <Route
-          path="/customer-registration"
-          element={
-            <CustomerLayout>
-              <CustomerRegistration />
-            </CustomerLayout>
-          }
-        />
+  path="/customer-registration/:agentToken"
+  element={
+    <CustomerLayout>
+      <CustomerRegistration />
+    </CustomerLayout>
+  }
+/>
 
 
         {/* ==================================================

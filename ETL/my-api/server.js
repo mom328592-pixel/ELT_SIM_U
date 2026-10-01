@@ -66,7 +66,143 @@ const app = express();
 app.set("trust proxy", 1);
 
 // CONFIG CORS (ລວມກັນເປັນ 1 ບ່ອນ)
-const allowedOrigins = ["https://eltsimu.vercel.app"];
+const allowedOrigins = [
+    "https://eltsimu.vercel.app",
+];
+
+app.use(
+    cors({
+        origin: function (
+            origin,
+            callback
+        ) {
+
+            if (!origin) {
+                return callback(
+                    null,
+                    true
+                );
+            }
+
+
+            if (
+                allowedOrigins.includes(
+                    origin
+                )
+            ) {
+                return callback(
+                    null,
+                    true
+                );
+            }
+
+
+            const isVercelPreview =
+                /^https:\/\/eltsimu-[a-z0-9-]+\.vercel\.app$/
+                    .test(origin);
+
+
+            if (
+                isVercelPreview
+            ) {
+                return callback(
+                    null,
+                    true
+                );
+            }
+
+
+            return callback(
+                new Error(
+                    "Not allowed by CORS"
+                )
+            );
+        },
+
+        credentials: true,
+
+        methods: [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "OPTIONS"
+        ],
+
+        allowedHeaders: [
+            "Content-Type",
+            "Authorization"
+        ]
+    })
+);
+
+app.use(
+    cors({
+        origin: function (
+            origin,
+            callback
+        ) {
+
+            if (!origin) {
+                return callback(
+                    null,
+                    true
+                );
+            }
+
+
+            if (
+                allowedOrigins.includes(
+                    origin
+                )
+            ) {
+                return callback(
+                    null,
+                    true
+                );
+            }
+
+
+            const isVercelPreview =
+                /^https:\/\/eltsimu-[a-z0-9-]+\.vercel\.app$/
+                    .test(origin);
+
+
+            if (
+                isVercelPreview
+            ) {
+                return callback(
+                    null,
+                    true
+                );
+            }
+
+
+            return callback(
+                new Error(
+                    "Not allowed by CORS"
+                )
+            );
+        },
+
+        credentials: true,
+
+        methods: [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "OPTIONS"
+        ],
+
+        allowedHeaders: [
+            "Content-Type",
+            "Authorization"
+        ]
+    })
+);
 
 app.use(
   cors({
@@ -167,7 +303,6 @@ app.use("/profile", authenticateToken, profileRoutes);
 app.use("/export", authenticateToken, authorizeRoles(1, 2, 3), exportRoutes);
 app.use("/notifications", authenticateToken, notificationsRoutes);
 app.use("/packages", authenticateToken, authorizeRoles(1, 2), packagesRoutes);
-app.use("/payments", authenticateToken, authorizeRoles(1, 2, 3), paymentsRoutes);
 app.use("/search", authenticateToken, authorizeRoles(1, 2, 3), searchRoutes);
 app.use("/uploads", authenticateToken, authorizeRoles(1, 2, 3), uploadsRoutes);
 
