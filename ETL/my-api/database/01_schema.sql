@@ -123,12 +123,12 @@ CREATE TABLE `packages` (
 DROP TABLE IF EXISTS `sim_status`;
 CREATE TABLE `sim_status` (
   `id_sim_status` int NOT NULL AUTO_INCREMENT,
-  `status_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `sim_status` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id_sim_status`) USING BTREE,
-  UNIQUE INDEX `status_name`(`status_name` ASC) USING BTREE
+  UNIQUE INDEX `sim_status`(`status_name` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------

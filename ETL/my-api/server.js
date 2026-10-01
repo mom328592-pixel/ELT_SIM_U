@@ -1,9 +1,34 @@
+
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
 require("dotenv").config();
 
+const app = express();
+
+// Trust the reverse proxy used by Render.
+// Keep this setting if your deployment is behind one proxy.
+app.set("trust proxy", 1);
+
+// ========================================
+// RATE LIMITER
+// ========================================
+const rateLimit = require("express-rate-limit");
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many login attempts. Please try again later.",
+  },
+});
+
+// ========================================
 // IMPORT ROUTES
+// ========================================
 const rolesRoutes = require("./routes/roles.routes");
 const usersRoutes = require("./routes/users.routes");
 const agentsRoutes = require("./routes/agents.routes");
@@ -27,196 +52,72 @@ const sessionRoutes = require("./routes/session.routes");
 const publicRegistrationRoutes = require("./routes/public-registration.routes");
 const passportOcrRoutes = require("./routes/passport-ocr.routes");
 const packagesRoutes = require("./routes/packages.routes");
-const paymentsRoutes = require("./routes/payments.routes");
 const searchRoutes = require("./routes/search.routes");
 const uploadsRoutes = require("./routes/uploads.routes");
+const registrationReviewRoutes = require("./routes/registration-review.routes");
 
+// ========================================
 // SWAGGER
+// ========================================
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./swagger");
 
-// MIDDLEWARES
+// ========================================
+// AUTH MIDDLEWARES
+// ========================================
 const authMiddlewareRaw = require("./middlewares/auth.middleware");
+
 const authenticateToken =
   typeof authMiddlewareRaw === "function"
     ? authMiddlewareRaw
     : authMiddlewareRaw.authenticateToken;
+
 const authorizeRoles = require("./middlewares/role.middleware");
 
-// RATE LIMITER
-const rateLimit = require("express-rate-limit");
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: "Too many login attempts. Please try again later.",
-  },
-});
+// Verify middleware exports.
+if (typeof authenticateToken !== "function") {
+  throw new Error(
+    "auth.middleware must export authenticateToken or a middleware function"
+  );
+}
 
-// LOG DEBUG
-console.log("1. authenticateToken:", typeof authenticateToken);
-console.log("2. authorizeRoles(1):", typeof authorizeRoles(1));
-console.log("3. rolesRoutes:", typeof rolesRoutes);
+if (typeof authorizeRoles !== "function") {
+  throw new Error(
+    "role.middleware must export authorizeRoles as a function"
+  );
+}
 
-const app = express();
+// ========================================
+// DEBUG
+// ========================================
+console.log("authenticateToken:", typeof authenticateToken);
+console.log("authorizeRoles(1):", typeof authorizeRoles(1));
 
-app.set("trust proxy", 1);
-
-// CONFIG CORS (ລວມກັນເປັນ 1 ບ່ອນ)
+// ========================================
+// CORS — CONFIGURE ONLY ONCE
+// ========================================
 const allowedOrigins = [
-    "https://eltsimu.vercel.app",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://eltsimu.vercel.app",
 ];
-
-app.use(
-    cors({
-        origin: function (
-            origin,
-            callback
-        ) {
-
-            if (!origin) {
-                return callback(
-                    null,
-                    true
-                );
-            }
-
-
-            if (
-                allowedOrigins.includes(
-                    origin
-                )
-            ) {
-                return callback(
-                    null,
-                    true
-                );
-            }
-
-
-            const isVercelPreview =
-                /^https:\/\/eltsimu-[a-z0-9-]+\.vercel\.app$/
-                    .test(origin);
-
-
-            if (
-                isVercelPreview
-            ) {
-                return callback(
-                    null,
-                    true
-                );
-            }
-
-
-            return callback(
-                new Error(
-                    "Not allowed by CORS"
-                )
-            );
-        },
-
-        credentials: true,
-
-        methods: [
-            "GET",
-            "POST",
-            "PUT",
-            "PATCH",
-            "DELETE",
-            "OPTIONS"
-        ],
-
-        allowedHeaders: [
-            "Content-Type",
-            "Authorization"
-        ]
-    })
-);
-
-app.use(
-    cors({
-        origin: function (
-            origin,
-            callback
-        ) {
-
-            if (!origin) {
-                return callback(
-                    null,
-                    true
-                );
-            }
-
-
-            if (
-                allowedOrigins.includes(
-                    origin
-                )
-            ) {
-                return callback(
-                    null,
-                    true
-                );
-            }
-
-
-            const isVercelPreview =
-                /^https:\/\/eltsimu-[a-z0-9-]+\.vercel\.app$/
-                    .test(origin);
-
-
-            if (
-                isVercelPreview
-            ) {
-                return callback(
-                    null,
-                    true
-                );
-            }
-
-
-            return callback(
-                new Error(
-                    "Not allowed by CORS"
-                )
-            );
-        },
-
-        credentials: true,
-
-        methods: [
-            "GET",
-            "POST",
-            "PUT",
-            "PATCH",
-            "DELETE",
-            "OPTIONS"
-        ],
-
-        allowedHeaders: [
-            "Content-Type",
-            "Authorization"
-        ]
-    })
-);
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests without an Origin header (เช่น Postman ຫຼື Mobile apps)
-      if (!origin) return callback(null, true);
+      // Requests without Origin, e.g. some server-to-server calls.
+      if (!origin) {
+        return callback(null, true);
+      }
 
-      // Check allowed explicit origins
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      // Check Vercel Preview deployments using valid Regex
-      const isVercelPreview = /^https:\/\/eltsimu-[a-z0-9-]+\.vercel\.app$/.test(origin);
+      // Allow Vercel preview URLs for this project.
+      const isVercelPreview =
+        /^https:\/\/eltsimu-[a-z0-9-]+\.vercel\.app$/i.test(origin);
+
       if (isVercelPreview) {
         return callback(null, true);
       }
@@ -224,39 +125,63 @@ app.use(
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS",
+    ],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+    ],
+    optionsSuccessStatus: 204,
   })
 );
 
-// PARSE BODY & STATIC FILES
+// ========================================
+// BODY PARSING & STATIC FILES
+// ========================================
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+// ========================================
 // HEALTH CHECK
+// ========================================
 app.get("/health", async (req, res) => {
   try {
     const pool = require("./db");
     await pool.query("SELECT 1");
-    res.json({
+
+    return res.json({
       success: true,
       status: "ok",
       database: "ok",
       time: new Date().toISOString(),
     });
-  } catch (e) {
-    res.status(503).json({
+  } catch (error) {
+    console.error("HEALTH CHECK ERROR:", error);
+
+    return res.status(503).json({
       success: false,
       status: "error",
       database: "unavailable",
-      message: e.message,
+      message: "Database connection failed",
     });
   }
 });
 
-// API DOCS
+// ========================================
+// API DOCUMENTATION
+// ========================================
 app.get("/api-docs.json", (req, res) => {
   res.json(swaggerSpec);
 });
+
 app.use(
   "/api-docs",
   swaggerUi.serve,
@@ -267,7 +192,9 @@ app.use(
   })
 );
 
-// TEST API
+// ========================================
+// ROOT
+// ========================================
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -275,47 +202,211 @@ app.get("/", (req, res) => {
   });
 });
 
+// ========================================
 // AUTH API
+// ========================================
+// If auth.routes.js already defines its own login limiter,
+// remove one of the duplicate limiters to avoid double limiting.
 app.use("/auth/login", loginLimiter);
 app.use("/auth", authRoutes);
 
+// ========================================
 // MANAGEMENT ROUTES
+// ========================================
 app.use("/roles", authenticateToken, authorizeRoles(1), rolesRoutes);
 app.use("/users", authenticateToken, authorizeRoles(1), usersRoutes);
 app.use("/agents", authenticateToken, authorizeRoles(1, 2), agentsRoutes);
 
-// SIM FILE & HISTORY
-app.use("/sim-files/history", authenticateToken, authorizeRoles(1, 2), simFileHistoryRoutes);
-app.use("/sim-files", authenticateToken, authorizeRoles(1, 2), simFileRoutes);
+// ========================================
+// SIM FILES & HISTORY
+// ========================================
+app.use(
+  "/sim-files/history",
+  authenticateToken,
+  authorizeRoles(1, 2),
+  simFileHistoryRoutes
+);
 
-// SIM & CUSTOMERS
-app.use("/sims", authenticateToken, authorizeRoles(1, 2, 3), simsRoutes);
-app.use("/customers", authenticateToken, authorizeRoles(1, 2, 3), customersRoutes);
-app.use("/registrations", authenticateToken, authorizeRoles(1, 2, 3), registrationsRoutes);
-app.use("/registrations", authenticateToken, authorizeRoles(1), require("./routes/registration-review.routes"));
+app.use(
+  "/sim-files",
+  authenticateToken,
+  authorizeRoles(1, 2),
+  simFileRoutes
+);
 
-// SYSTEM CONFIG & LOGS
-app.use("/status-users", authenticateToken, authorizeRoles(1), statusUsersRoutes);
-app.use("/audit-logs", authenticateToken, authorizeRoles(1), auditLogsRoutes);
-app.use("/reports", authenticateToken, authorizeRoles(1), reportsRoutes);
-app.use("/profile/sessions", authenticateToken, sessionRoutes);
-app.use("/profile", authenticateToken, profileRoutes);
-app.use("/export", authenticateToken, authorizeRoles(1, 2, 3), exportRoutes);
-app.use("/notifications", authenticateToken, notificationsRoutes);
-app.use("/packages", authenticateToken, authorizeRoles(1, 2), packagesRoutes);
-app.use("/search", authenticateToken, authorizeRoles(1, 2, 3), searchRoutes);
-app.use("/uploads", authenticateToken, authorizeRoles(1, 2, 3), uploadsRoutes);
+// ========================================
+// SIMS, CUSTOMERS & REGISTRATIONS
+// ========================================
+app.use(
+  "/sims",
+  authenticateToken,
+  authorizeRoles(1, 2, 3),
+  simsRoutes
+);
 
-// MASTER DATA ROUTES
+app.use(
+  "/customers",
+  authenticateToken,
+  authorizeRoles(1, 2, 3),
+  customersRoutes
+);
+
+app.use(
+  "/registrations",
+  authenticateToken,
+  authorizeRoles(1, 2, 3),
+  registrationsRoutes
+);
+
+// Registration review endpoints for administrators.
+app.use(
+  "/registrations",
+  authenticateToken,
+  authorizeRoles(1),
+  registrationReviewRoutes
+);
+
+// ========================================
+// SYSTEM SETTINGS, LOGS & REPORTS
+// ========================================
+app.use(
+  "/status-users",
+  authenticateToken,
+  authorizeRoles(1),
+  statusUsersRoutes
+);
+
+app.use(
+  "/audit-logs",
+  authenticateToken,
+  authorizeRoles(1),
+  auditLogsRoutes
+);
+
+app.use(
+  "/reports",
+  authenticateToken,
+  authorizeRoles(1),
+  reportsRoutes
+);
+
+app.use(
+  "/profile/sessions",
+  authenticateToken,
+  sessionRoutes
+);
+
+app.use(
+  "/profile",
+  authenticateToken,
+  profileRoutes
+);
+
+app.use(
+  "/export",
+  authenticateToken,
+  authorizeRoles(1, 2, 3),
+  exportRoutes
+);
+
+app.use(
+  "/notifications",
+  authenticateToken,
+  notificationsRoutes
+);
+
+app.use(
+  "/packages",
+  authenticateToken,
+  authorizeRoles(1, 2),
+  packagesRoutes
+);
+
+app.use(
+  "/search",
+  authenticateToken,
+  authorizeRoles(1, 2, 3),
+  searchRoutes
+);
+
+app.use(
+  "/uploads",
+  authenticateToken,
+  authorizeRoles(1, 2, 3),
+  uploadsRoutes
+);
+
+// ========================================
+// MASTER DATA
+// ========================================
 app.use("/sim-types", simTypesRoutes);
-app.use("/sim-status", authenticateToken, authorizeRoles(1), simStatusRoutes);
-app.use("/registration-status", authenticateToken, authorizeRoles(1), registrationStatusRoutes);
-app.use("/user-status", authenticateToken, authorizeRoles(1), userStatusRoutes);
+
+app.use(
+  "/sim-status",
+  authenticateToken,
+  authorizeRoles(1),
+  simStatusRoutes
+);
+
+app.use(
+  "/registration-status",
+  authenticateToken,
+  authorizeRoles(1),
+  registrationStatusRoutes
+);
+
+app.use(
+  "/user-status",
+  authenticateToken,
+  authorizeRoles(1),
+  userStatusRoutes
+);
+
+// ========================================
+// PUBLIC REGISTRATION & PASSPORT OCR
+// ========================================
 app.use("/public", publicRegistrationRoutes);
 app.use("/public", passportOcrRoutes);
 
+// ========================================
+// NOT FOUND
+// ========================================
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
+  });
+});
+
+// ========================================
+// ERROR HANDLER
+// ========================================
+app.use((error, req, res, next) => {
+  console.error("SERVER ERROR:", error);
+
+  if (res.headersSent) {
+    return next(error);
+  }
+
+  // CORS errors should also return a JSON response.
+  if (error.message === "Not allowed by CORS") {
+    return res.status(403).json({
+      success: false,
+      message: "Origin not allowed by CORS",
+    });
+  }
+
+  return res.status(500).json({
+    success: false,
+    message: "Internal server error",
+  });
+});
+
+// ========================================
 // START SERVER
+// ========================================
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server is running on port ${PORT}`);
 });

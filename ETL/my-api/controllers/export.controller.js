@@ -170,16 +170,34 @@ const exportRegistrations = async (req, res) => {
 const exportCustomers = async (req, res) => {
     try {
         const [rows] = await pool.query(`
-            SELECT
-                c.id_customer AS ID,
-                c.first_name AS First_Name,
-                c.last_name AS Last_Name,
-                c.passport_number AS Passport_Number,
-                c.nationality AS Nationality,
-                c.date_of_birth AS Date_of_Birth
-            FROM customers c
-            ORDER BY c.id_customer DESC
-        `);
+    SELECT
+        s.id_sim AS ID,
+        s.iccid AS ICCID,
+        s.imsi AS IMSI,
+        s.phone_number AS Phone_Number,
+        st.sim_type AS SIM_Type,
+        ss.status_name AS SIM_Status,
+        s.package AS Package,
+        s.qr_code AS QR_Code,
+        s.id_file AS File_ID,
+        hf.file_name AS File_Name,
+        s.link_url AS Link_URL,
+        s.imported_at AS Imported_At
+    FROM sim_cards s
+
+    LEFT JOIN sim_types st
+        ON s.id_sim_type = st.id_sim_type
+
+    LEFT JOIN sim_status ss
+        ON s.id_sim_status = ss.id_sim_status
+
+    LEFT JOIN history_sim_card_file hf
+        ON s.id_file = hf.id_file
+
+    WHERE s.deleted_at IS NULL
+
+    ORDER BY s.id_sim DESC
+`);
 
         const worksheet =
             XLSX.utils.json_to_sheet(rows);
@@ -229,34 +247,34 @@ const exportCustomers = async (req, res) => {
 const exportSims = async (req, res) => {
     try {
         const [rows] = await pool.query(`
-            SELECT
-                s.id_sim AS ID,
-                s.iccid AS ICCID,
-                s.imsi AS IMSI,
-                s.phone_number AS Phone_Number,
-                st.sim_type AS SIM_Type,
-                ss.sim_status AS SIM_Status,
-                s.package AS Package,
-                s.qr_code AS QR_Code,
-                s.id_file AS File_ID,
-                hf.file_name AS File_Name,
-                s.link_url AS Link_URL,
-                s.imported_at AS Imported_At
-            FROM sim_cards s
+    SELECT
+        s.id_sim AS ID,
+        s.iccid AS ICCID,
+        s.imsi AS IMSI,
+        s.phone_number AS Phone_Number,
+        st.sim_type AS SIM_Type,
+        ss.status_name AS SIM_Status,
+        s.package AS Package,
+        s.qr_code AS QR_Code,
+        s.id_file AS File_ID,
+        hf.file_name AS File_Name,
+        s.link_url AS Link_URL,
+        s.imported_at AS Imported_At
+    FROM sim_cards s
 
-            LEFT JOIN sim_types st
-                ON s.id_sim_type = st.id_sim_type
+    LEFT JOIN sim_types st
+        ON s.id_sim_type = st.id_sim_type
 
-            LEFT JOIN sim_status ss
-                ON s.id_sim_status = ss.id_sim_status
+    LEFT JOIN sim_status ss
+        ON s.id_sim_status = ss.id_sim_status
 
-            LEFT JOIN history_sim_card_file hf
-                ON s.id_file = hf.id_file
+    LEFT JOIN history_sim_card_file hf
+        ON s.id_file = hf.id_file
 
-            WHERE s.deleted_at IS NULL
+    WHERE s.deleted_at IS NULL
 
-            ORDER BY s.id_sim DESC
-        `);
+    ORDER BY s.id_sim DESC
+`);
 
         const worksheet =
             XLSX.utils.json_to_sheet(rows);
