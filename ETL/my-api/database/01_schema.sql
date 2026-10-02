@@ -302,23 +302,6 @@ INSERT INTO `audit_logs` VALUES (13, NULL, 'ACCOUNT_LOCKED', 'users', '3', '{"at
 INSERT INTO `audit_logs` VALUES (14, NULL, 'ACCOUNT_LOCKED', 'users', '3', '{"attempts": 5, "username": "admin", "lockout_minutes": 15}', '101.78.12.94, 104.22.66.218, 10.25.19.29', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0', '2026-09-28 03:52:13', NULL);
 
 -- ----------------------------
--- 14. Table structure for notifications
--- ----------------------------
-DROP TABLE IF EXISTS `notifications`;
-CREATE TABLE `notifications` (
-  `id_notification` bigint NOT NULL AUTO_INCREMENT,
-  `id_user` int NOT NULL,
-  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `message` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT 'info',
-  `is_read` tinyint(1) NULL DEFAULT 0,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id_notification`) USING BTREE,
-  INDEX `fk_notification_user`(`id_user` ASC) USING BTREE,
-  CONSTRAINT `fk_notification_user` FOREIGN KEY (`id_user`) REFERENCES `users` (`id_user`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
-
--- ----------------------------
 -- 15. Table structure for refresh_tokens
 -- ----------------------------
 DROP TABLE IF EXISTS `refresh_tokens`;

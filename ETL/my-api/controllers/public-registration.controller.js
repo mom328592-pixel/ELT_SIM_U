@@ -236,7 +236,7 @@ const createPublicRegistration = async (req, res) => {
                     s.activation_code,
                     s.link_url,
 
-                    ss.status_name AS sim_status,
+                    ss.sim_status AS sim_status
 
                     st.sim_type,
 
@@ -260,7 +260,7 @@ const createPublicRegistration = async (req, res) => {
                        p.id_package
 
                 WHERE s.id_sim_type = ?
-                  AND LOWER(ss.status_name) =
+                  AND LOWER(ss.sim_status) =
                       'available'
                   AND s.deleted_at IS NULL
 
@@ -322,7 +322,7 @@ const createPublicRegistration = async (req, res) => {
 
                 WHERE r.id_sim = ?
 
-                  AND LOWER(rs.status_name) =
+                  AND LOWER(rs.sim_status) =
                       'pending'
 
                   AND r.deleted_at IS NULL
@@ -513,32 +513,7 @@ const createPublicRegistration = async (req, res) => {
 
         // ==================================================
         // RESERVED STATUS
-        // ==================================================
-
-        const [reservedStatus] =
-            await connection.query(`
-                SELECT
-                    id_sim_status
-                FROM sim_status
-                WHERE LOWER(status_name) =
-                      'reserved'
-                LIMIT 1
-            `);
-
-
-        if (reservedStatus.length) {
-
-            await connection.query(`
-                UPDATE sim_cards
-                SET
-                    id_sim_status = ?,
-                    updated_at = NOW()
-                WHERE id_sim = ?
-            `, [
-                reservedStatus[0].id_sim_status,
-                sim.id_sim
-            ]);
-        }
+        // ==========================================
 
 
         // ==================================================

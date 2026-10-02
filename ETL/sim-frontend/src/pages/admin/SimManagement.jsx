@@ -11,6 +11,7 @@ function SimManagement() {
   // Dynamic Options State
   const [simTypes, setSimTypes] = useState([]);
   const [simStatuses, setSimStatuses] = useState([]);
+  const [packages, setPackages] = useState([]);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -23,7 +24,7 @@ function SimManagement() {
     iccid: "",
     imsi: "",
     qr_code: "",
-    package: "",
+    id_package: "",
     phone_number: "",
     id_sim_type: 2,
     id_sim_status: 1,
@@ -78,15 +79,22 @@ function SimManagement() {
       setLoading(true);
       setError("");
 
-      const [simsResponse, simTypesResponse, simStatusesResponse] = await Promise.all([
-        apiFetch("/sims"),
-        apiFetch("/sim-types"),
-        apiFetch("/sim-status"),
-      ]);
+      const [
+    simsResponse,
+    simTypesResponse,
+    simStatusesResponse,
+    packagesResponse
+] = await Promise.all([
+    apiFetch("/sims"),
+    apiFetch("/sim-types"),
+    apiFetch("/sim-status"),
+    apiFetch("/packages?active=1")
+]);
 
       setSims(simsResponse.data || []);
-      setSimTypes(simTypesResponse.data || []);
-      setSimStatuses(simStatusesResponse.data || []);
+setSimTypes(simTypesResponse.data || []);
+setSimStatuses(simStatusesResponse.data || []);
+setPackages(packagesResponse.data || []);
     } catch (err) {
       console.error("GET SIM DATA ERROR:", err);
       setError(err.message);
@@ -122,17 +130,17 @@ function SimManagement() {
     setEditingSim(null);
 
     setForm({
-      iccid: "",
-      imsi: "",
-      qr_code: "",
-      package: "",
-      phone_number: "",
-      id_sim_type: simTypes[0]?.id_sim_type || 2,
-      id_sim_status: simStatuses[0]?.id_sim_status || 1,
-      imported_by: currentUser?.id_user || "",
-      id_file: "",
-      link_url: "",
-    });
+    iccid: "",
+    imsi: "",
+    qr_code: "",
+    activation_code: "",
+    id_package: packages[0]?.id_package || "",
+    phone_number: "",
+    id_sim_type: simTypes[0]?.id_sim_type || "",
+    id_sim_status: simStatuses[0]?.id_sim_status || "",
+    imported_by: currentUser?.id_user || "",
+    id_file: ""
+});
 
     setShowModal(true);
   };
@@ -141,17 +149,17 @@ function SimManagement() {
     setEditingSim(sim);
 
     setForm({
-      iccid: sim.iccid || "",
-      imsi: sim.imsi || "",
-      qr_code: sim.qr_code || "",
-      package: sim.package || "",
-      phone_number: sim.phone_number || "",
-      id_sim_type: sim.id_sim_type || 2,
-      id_sim_status: sim.id_sim_status || 1,
-      imported_by: sim.imported_by || "",
-      id_file: sim.id_file || "",
-      link_url: sim.link_url || "",
-    });
+    iccid: sim.iccid || "",
+    imsi: sim.imsi || "",
+    qr_code: sim.qr_code || "",
+    activation_code: sim.activation_code || "",
+    id_package: sim.id_package || "",
+    phone_number: sim.phone_number || "",
+    id_sim_type: sim.id_sim_type || "",
+    id_sim_status: sim.id_sim_status || "",
+    imported_by: sim.imported_by || "",
+    id_file: sim.id_file || ""
+});
 
     setShowModal(true);
   };
@@ -174,18 +182,24 @@ function SimManagement() {
       }
 
       const payload = {
-        ...form,
-        id_sim_type: Number(form.id_sim_type),
-        id_sim_status: Number(form.id_sim_status),
-        imported_by: form.imported_by ? Number(form.imported_by) : null,
-        id_file: form.id_file ? Number(form.id_file) : null,
-      };
-
+    ...form,
+    id_sim_type: Number(form.id_sim_type),
+    id_sim_status: Number(form.id_sim_status),
+    id_package: form.id_package
+        ? Number(form.id_package)
+        : null,
+    imported_by: form.imported_by
+        ? Number(form.imported_by)
+        : null,
+    id_file: form.id_file
+        ? Number(form.id_file)
+        : null
+};
       if (editingSim) {
-        await apiFetch(`/sim/${editingSim.id_sim}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
+        await apiFetch(`/sims/${editingSim.id_sim}`, {
+    method: "PUT",
+    body: JSON.stringify(payload)
+});
 
         alert("SIM updated successfully");
       } else {
@@ -216,9 +230,9 @@ function SimManagement() {
     if (!confirmed) return;
 
     try {
-      await apiFetch(`/sim/${id}`, {
-        method: "DELETE",
-      });
+      await apiFetch(`/sims/${id}`, {
+    method: "DELETE"
+});
 
       alert("SIM deleted successfully");
       loadSims();
@@ -348,7 +362,22 @@ function SimManagement() {
                           {sim.sim_status || "-"}
                         </span>
                       </td>
-                      <td>{sim.package || "-"}</td>
+                      <td>
+    {sim.package_name ? (
+        <div>
+            <strong>
+                {sim.package_name}
+            </strong>
+
+            <small>
+                {sim.package_data_gb}GB /
+                {sim.package_duration_days} Days
+            </small>
+        </div>
+    ) : (
+        "-"
+    )}
+</td>
                       <td>{sim.file_name || "-"}</td>
                       <td>
                         <div className="action-buttons">
@@ -464,15 +493,31 @@ function SimManagement() {
                 </div>
 
                 <div className="form-group">
-                  <label>Package</label>
-                  <input
-                    type="text"
-                    name="package"
-                    value={form.package}
-                    onChange={handleChange}
-                    placeholder="esim+Package tourist 20Gb/15D"
-                  />
-                </div>
+    <label>Package</label>
+
+    <select
+        name="id_package"
+        value={form.id_package}
+        onChange={handleChange}
+        required
+    >
+        <option value="">
+            Select Package
+        </option>
+
+        {packages.map((pkg) => (
+            <option
+                key={pkg.id_package}
+                value={pkg.id_package}
+            >
+                {pkg.package_name}
+                {" - "}
+                {pkg.data_gb}GB /
+                {pkg.duration_days} Days
+            </option>
+        ))}
+    </select>
+</div>
 
                 <div className="form-group">
                   <label>SIM Type</label>
