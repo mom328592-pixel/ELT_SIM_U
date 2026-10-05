@@ -131,13 +131,17 @@ const changeMyPassword = async (req, res) => {
             });
         }
 
-        if (new_password.length < 8) {
-            return res.status(400).json({
-                success: false,
-                message:
-                    "New password must be at least 8 characters"
-            });
-        }
+        const strongPassword =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+if (!strongPassword.test(new_password)) {
+
+    return res.status(400).json({
+        success: false,
+        message:
+            "Password must be at least 8 characters and contain uppercase, lowercase, number and special character"
+    });
+}
 
         const [rows] = await pool.query(
             `

@@ -11,7 +11,9 @@ const FRONTEND_URL =
 const generatePublicToken = () => {
     return crypto.randomBytes(32).toString("hex");
 };
-
+const {
+    createAuditLog
+} = require("../utils/audit");
 
 // ======================================================
 // PUBLIC URL
@@ -42,7 +44,40 @@ const getAllAgents = async (req, res) => {
                 a.created_by,
                 u.username AS created_by_username,
                 a.created_at,
-                a.updated_at
+                a.updated_at,
+                (
+                    SELECT COUNT(*)
+                    FROM registrations r
+                    WHERE r.id_agent = a.id_agent
+                      AND r.deleted_at IS NULL
+                ) AS total_registrations,
+                (
+                    SELECT COUNT(*)
+                    FROM registrations r
+                    INNER JOIN registrations_status rs
+                        ON r.id_registration_status = rs.id_registration_status
+                    WHERE r.id_agent = a.id_agent
+                      AND LOWER(rs.status_name) = 'pending'
+                      AND r.deleted_at IS NULL
+                ) AS pending_registrations,
+                (
+                    SELECT COUNT(*)
+                    FROM registrations r
+                    INNER JOIN registrations_status rs
+                        ON r.id_registration_status = rs.id_registration_status
+                    WHERE r.id_agent = a.id_agent
+                      AND LOWER(rs.status_name) = 'approved'
+                      AND r.deleted_at IS NULL
+                ) AS approved_registrations,
+                (
+                    SELECT COUNT(*)
+                    FROM registrations r
+                    INNER JOIN registrations_status rs
+                        ON r.id_registration_status = rs.id_registration_status
+                    WHERE r.id_agent = a.id_agent
+                      AND LOWER(rs.status_name) = 'rejected'
+                      AND r.deleted_at IS NULL
+                ) AS rejected_registrations
             FROM agents a
             LEFT JOIN users u
                 ON a.created_by = u.id_user
@@ -184,7 +219,15 @@ const createAgent = async (req, res) => {
         });
     }
 };
-
+await createAuditLog({
+    req,
+    action: "CREATE",
+    targetEntity: "agents",
+    targetId: result.insertId,
+    metadata: {
+        agent_name
+    }
+}).catch(console.error);
 
 // ======================================================
 // UPDATE AGENT
@@ -245,7 +288,27 @@ const updateAgent = async (req, res) => {
         });
     }
 };
-
+await createAuditLog({
+    req,
+    action: "UPDATE",
+    targetEntity: "agents",
+    targetId: id,
+    metadata: {
+        agent_name
+    }
+}).catch(console.error);
+await createAuditLog({
+    req,
+    action: "REGENERATE_PUBLIC_LINK",
+    targetEntity: "agents",
+    targetId: id
+}).catch(console.error);
+await createAuditLog({
+    req,
+    action: "DELETE",
+    targetEntity: "agents",
+    targetId: id
+}).catch(console.error);
 
 // ======================================================
 // REGENERATE PUBLIC LINK

@@ -617,7 +617,7 @@ function App() {
           element={
             <ProtectedRoute
               user={user}
-              allowedRoles={[1]}
+              allowedRoles={[1, 2]}
             >
               <AdminLayout
                 user={user}

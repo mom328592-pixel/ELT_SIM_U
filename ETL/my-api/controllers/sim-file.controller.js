@@ -405,12 +405,29 @@ const uploadSimFile = async (req, res) => {
 
         // READ EXCEL / CSV
         const XLSX = require("xlsx");
-        const workbook = XLSX.read(req.file.buffer, { type: "buffer", raw: true });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
 
-        // ດຶງຂໍ້ມູນເປັນ JSON
-        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+const workbook = XLSX.read(
+    req.file.buffer,
+    {
+        type: "buffer",
+        raw: true
+    }
+);
+
+const sheetName =
+    workbook.SheetNames[0];
+
+const worksheet =
+    workbook.Sheets[sheetName];
+
+const rows =
+    XLSX.utils.sheet_to_json(
+        worksheet,
+        {
+            defval: null,
+            raw: true
+        }
+    );
 
         if (rows.length === 0) {
             connection.release();
@@ -421,7 +438,166 @@ const uploadSimFile = async (req, res) => {
         }
 
         await connection.beginTransaction();
+const toText = (value) => {
 
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return "";
+    }
+
+    const text =
+        String(value).trim();
+
+    if (
+        /e\+?/i.test(text)
+    ) {
+        throw new Error(
+            "ICCID/IMSI must be stored as Excel Text, not scientific notation"
+        );
+    }
+
+    return text;
+};
+for (let i = 0; i < rows.length; i++) {
+
+    const row = rows[i];
+
+    const getVal = (key) => {
+
+        const foundKey =
+            Object.keys(row).find(
+                k =>
+                    k.trim().toLowerCase() ===
+                    key.toLowerCase()
+            );
+
+        return foundKey
+            ? row[foundKey]
+            : null;
+    };
+
+
+    try {
+
+        const iccid =
+            toText(
+                getVal("iccid")
+            );
+
+        const imsi =
+            toText(
+                getVal("imsi")
+            );
+
+        const phone =
+            toText(
+                getVal("phone_number") ||
+                getVal("phone")
+            );
+
+        const qrCode =
+            toText(
+                getVal("qr_code") ||
+                getVal("qr")
+            );
+
+        const activationCode =
+            toText(
+                getVal("activation_code")
+            );
+
+        const idPackage =
+            getVal("id_package");
+
+        const idSimType =
+            getVal("id_sim_type");
+
+        const idSimStatus =
+            getVal("id_sim_status") || 1;
+
+
+        if (!iccid || !imsi) {
+
+            errors.push({
+                row: i + 2,
+                message:
+                    "ICCID and IMSI are required"
+            });
+
+            continue;
+        }
+
+        if (!idPackage) {
+
+            errors.push({
+                row: i + 2,
+                message:
+                    "id_package is required"
+            });
+
+            continue;
+        }
+
+
+        const [result] =
+            await connection.query(`
+                INSERT INTO sim_cards (
+                    iccid,
+                    imsi,
+                    qr_code,
+                    activation_code,
+                    phone_number,
+                    id_sim_type,
+                    id_package,
+                    id_sim_status,
+                    imported_by,
+                    id_file,
+                    imported_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            `, [
+                iccid,
+                imsi,
+                qrCode || null,
+                activationCode || null,
+                phone || null,
+                idSimType || null,
+                Number(idPackage),
+                Number(idSimStatus),
+                req.user?.id_user || null,
+                id_file
+            ]);
+
+
+        importedSims.push({
+
+            id_sim:
+                result.insertId,
+
+            row:
+                i + 2,
+
+            iccid,
+            imsi,
+
+            phone_number:
+                phone || null
+        });
+
+    } catch (error) {
+
+        errors.push({
+
+            row:
+                i + 2,
+
+            message:
+                error.message
+        });
+    }
+}
         // CREATE FILE HISTORY
         const [fileResult] = await connection.query(
             `INSERT INTO history_sim_card_file (file_name, id_agent) VALUES (?, ?)`,

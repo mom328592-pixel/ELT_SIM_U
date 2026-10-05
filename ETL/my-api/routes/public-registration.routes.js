@@ -8,30 +8,32 @@ const upload = require(
 
 const {
     getRegistrationOptions,
-    createPublicRegistration
+    createPublicRegistration,
+    getPublicRegistrationStatus
 } = require(
     "../controllers/public-registration.controller"
 );
 
 
-// ======================================================
-// GET REGISTRATION OPTIONS
-// ======================================================
-
+// Registration options
 router.get(
     "/registration-options/:agentToken",
     getRegistrationOptions
 );
 
 
-// ======================================================
-// CREATE REGISTRATION
-// ======================================================
-
+// Create registration
 router.post(
     "/registrations",
     upload.single("passport"),
     createPublicRegistration
+);
+
+
+// Check result after submission
+router.get(
+    "/registration-status/:agentToken/:id",
+    getPublicRegistrationStatus
 );
 
 

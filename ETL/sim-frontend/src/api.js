@@ -1,4 +1,5 @@
-const API_URL = "https://eltsimu.onrender.com";
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 async function refreshAccessToken() {
   const refreshToken = localStorage.getItem("refresh_token");

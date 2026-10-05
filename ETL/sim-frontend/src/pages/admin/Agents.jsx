@@ -258,6 +258,8 @@ function Agents() {
                   <th>Address</th>
                   <th>Created By</th>
                   <th>Actions</th>
+                  <th>Public Link</th>
+                  <th>Registrations</th>
                 </tr>
               </thead>
 
@@ -311,6 +313,52 @@ function Agents() {
                     </tr>
                   ))
                 )}
+                <td>
+    {agent.public_url ? (
+        <div>
+            <a
+                href={agent.public_url}
+                target="_blank"
+                rel="noreferrer"
+            >
+                Open Link
+            </a>
+
+            <button
+                type="button"
+                onClick={() =>
+                    navigator.clipboard.writeText(
+                        agent.public_url
+                    )
+                }
+            >
+                Copy
+            </button>
+        </div>
+    ) : (
+        "-"
+    )}
+</td>
+
+<td>
+    <div>
+        Total:
+        {" "}
+        {agent.total_registrations || 0}
+    </div>
+
+    <div>
+        Pending:
+        {" "}
+        {agent.pending_registrations || 0}
+    </div>
+
+    <div>
+        Approved:
+        {" "}
+        {agent.approved_registrations || 0}
+    </div>
+</td>
               </tbody>
             </table>
 

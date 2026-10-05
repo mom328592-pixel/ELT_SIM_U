@@ -172,13 +172,6 @@ function Registrations() {
           method: "POST",
           body: JSON.stringify(payload),
         });
-
-        createNotification(
-          "New Registration",
-          "A new SIM registration is waiting for review.",
-          "registration"
-        );
-        alert("Registration created successfully");
       }
 
       closeModal();
@@ -245,12 +238,6 @@ function Registrations() {
               `Registration ${statusName.toLowerCase()}`,
           }),
         }
-      );
-
-      createNotification(
-        statusName === "Approved" ? "Registration Approved" : "Registration Rejected",
-        `Registration #${registration.id_registration} was ${statusName.toLowerCase()}.`,
-        "success"
       );
 
       alert(

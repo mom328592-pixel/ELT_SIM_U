@@ -138,7 +138,7 @@ const parsePassportText = (text) => {
         first_name: firstName,
         last_name: lastName,
         passport_number: passportNumber,
-        nationality: nationality || "DEU",
+        nationality: nationality || "",
         date_of_birth: dateOfBirth
     };
 };

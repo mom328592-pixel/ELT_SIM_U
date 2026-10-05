@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-
+import { QRCodeCanvas } from "qrcode.react";
 const API_URL = "https://eltsimu.onrender.com";
 
 function CustomerRegistration() {
@@ -24,6 +24,12 @@ function CustomerRegistration() {
   const [registeredSim, setRegisteredSim] = useState(null);
   const [registrationId, setRegistrationId] = useState(null);
 
+  const [registrationStatus, setRegistrationStatus] =
+    useState("Pending");
+
+  const [resultLoading, setResultLoading] =
+    useState(false);
+
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -33,6 +39,97 @@ function CustomerRegistration() {
     passport_expiry_date: "",
     phone_number: "",
   });
+
+
+
+  useEffect(() => {
+
+    if (!registrationId || !agentToken) {
+        return;
+    }
+
+    let timer = null;
+
+    const checkStatus = async () => {
+
+        try {
+
+            setResultLoading(true);
+
+            const response =
+                await fetch(
+                    `${API_URL}/public/registration-status/${encodeURIComponent(
+                        agentToken
+                    )}/${registrationId}`
+                );
+
+            const data =
+                await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.message ||
+                    "Unable to check registration status"
+                );
+            }
+
+            const result =
+                data.data || {};
+
+            setRegistrationStatus(
+                result.status || "Pending"
+            );
+
+            if (result.sim) {
+                setRegisteredSim(
+                    result.sim
+                );
+            }
+
+            if (
+                result.status === "Approved" ||
+                result.status === "Rejected"
+            ) {
+                return;
+            }
+
+            timer =
+                setTimeout(
+                    checkStatus,
+                    5000
+                );
+
+        } catch (error) {
+
+            console.error(
+                "CHECK REGISTRATION STATUS ERROR:",
+                error
+            );
+
+            timer =
+                setTimeout(
+                    checkStatus,
+                    10000
+                );
+
+        } finally {
+
+            setResultLoading(false);
+        }
+    };
+
+    checkStatus();
+
+    return () => {
+        if (timer) {
+            clearTimeout(timer);
+        }
+    };
+
+}, [
+    registrationId,
+    agentToken
+]);
 
   // =====================================================
   // CLEANUP PASSPORT PREVIEW
@@ -998,281 +1095,267 @@ function CustomerRegistration() {
           PHYSICAL SIM SUCCESS
       ================================================= */}
 
-      {step === 4 && (
-        <div className="step-content success-view">
+      {(step === 4 || step === 5) && (
+    <div className="registration-card">
 
-          <div className="success-badge">
-            ✓
-          </div>
+        <h2>
+            Registration Result
+        </h2>
 
-          <h2>
-            ສົ່ງຄຳຂໍສຳເລັດ!
-          </h2>
-
-          <p className="subtext">
-            Your registration is waiting
-            for administrator approval.
-          </p>
-
-          {/* Registration ID */}
-          {registrationId && (
-            <div className="registration-number">
-              Registration ID:{" "}
-              <strong>
+        <p>
+            Registration ID:
+            {" "}
+            <strong>
                 #{registrationId}
-              </strong>
-            </div>
-          )}
+            </strong>
+        </p>
 
-          {/* Info */}
-          <div className="info-card">
-
-            <div className="info-row">
-              <span>
-                Agent
-              </span>
-
-              <strong>
-                {agent?.agent_name || "-"}
-              </strong>
-            </div>
-
-            <div className="info-row">
-              <span>
-                Phone Number
-              </span>
-
-              <strong>
-                {registeredSim?.phone_number ||
-                  "-"}
-              </strong>
-            </div>
-
-            <div className="info-row">
-              <span>
-                IMSI
-              </span>
-
-              <strong>
-                {registeredSim?.imsi ||
-                  "-"}
-              </strong>
-            </div>
-
-            <div className="info-row">
-              <span>
-                ICCID
-              </span>
-
-              <strong>
-                {registeredSim?.iccid ||
-                  "-"}
-              </strong>
-            </div>
-
-            <div className="info-row">
-              <span>
-                SIM Type
-              </span>
-
-              <strong>
-                {registeredSim?.sim_type ||
-                  "Physical SIM"}
-              </strong>
-            </div>
-
-            <div className="info-row">
-              <span>
-                Status
-              </span>
-
-              <span className="status-pending">
-                Pending Review
-              </span>
-            </div>
-
-          </div>
-
-          {/* Instructions */}
-          <div className="instructions-box">
+        <div className="status-result-card">
 
             <strong>
-              Instructions
+                Status
             </strong>
 
-            <p>
-              Please wait for administrator
-              approval. The physical SIM will
-              be activated after approval.
-            </p>
-
-          </div>
-
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={handleFinish}
-          >
-            Finish
-          </button>
+            <div>
+                {resultLoading
+                    ? "Checking..."
+                    : registrationStatus}
+            </div>
 
         </div>
-      )}
 
-      {/* =================================================
-          STEP 5
-          eSIM SUCCESS
-      ================================================= */}
 
-      {step === 5 && (
-        <div className="step-content success-view dark-mode">
+        {/* ============================================
+            PENDING
+        ============================================ */}
 
-          <div className="success-badge dark">
-            ✓
-          </div>
+        {registrationStatus === "Pending" && (
+            <div className="result-info">
 
-          <h2>
-            ສົ່ງຄຳຂໍ eSIM ສຳເລັດ!
-          </h2>
+                <h3>
+                    Waiting for approval
+                </h3>
 
-          <p className="subtext">
-            Your eSIM registration is waiting
-            for administrator approval.
-          </p>
+                <p>
+                    Your registration has been
+                    submitted successfully.
+                </p>
 
-          {/* Registration ID */}
-          {registrationId && (
-            <div className="registration-number">
-              Registration ID:{" "}
-              <strong>
-                #{registrationId}
-              </strong>
+                <p>
+                    Please keep this page open.
+                    The system will check the
+                    registration status automatically.
+                </p>
+
             </div>
-          )}
+        )}
 
-          {/* QR */}
-          <div className="qr-container-card">
 
-            <div className="qr-box">
+        {/* ============================================
+            REJECTED
+        ============================================ */}
 
-              <div className="qr-dummy">
+        {registrationStatus === "Rejected" && (
+            <div className="result-error">
 
-                <div className="qr-icon">
-                  QR
+                <h3>
+                    Registration rejected
+                </h3>
+
+                <p>
+                    Please contact the agent
+                    or ETL staff for assistance.
+                </p>
+
+            </div>
+        )}
+
+
+        {/* ============================================
+            APPROVED
+        ============================================ */}
+
+        {registrationStatus === "Approved" && (
+            <div className="result-success">
+
+                <h3>
+                    Registration approved
+                </h3>
+
+
+                <div className="sim-result">
+
+                    <p>
+                        <strong>
+                            Phone Number:
+                        </strong>
+
+                        {" "}
+
+                        {registeredSim?.phone_number ||
+                            "-"}
+                    </p>
+
+
+                    <p>
+                        <strong>
+                            IMSI:
+                        </strong>
+
+                        {" "}
+
+                        {registeredSim?.imsi ||
+                            "-"}
+                    </p>
+
+
+                    <p>
+                        <strong>
+                            ICCID:
+                        </strong>
+
+                        {" "}
+
+                        {registeredSim?.iccid ||
+                            "-"}
+                    </p>
+
+
+                    <p>
+                        <strong>
+                            SIM Type:
+                        </strong>
+
+                        {" "}
+
+                        {registeredSim?.sim_type ||
+                            "-"}
+                    </p>
+
+
+                    <p>
+                        <strong>
+                            Package:
+                        </strong>
+
+                        {" "}
+
+                        {registeredSim?.package_name ||
+                            "-"}
+
+                    </p>
+
                 </div>
 
-                <strong>
-                  QR Code
-                </strong>
 
-                <span>
-                  Available after approval
-                </span>
+                {/* ====================================
+                    eSIM
+                ==================================== */}
 
-              </div>
+                {registeredSim?.sim_type
+                    ?.toLowerCase()
+                    .includes("esim") && (
+
+                    <div className="qr-result">
+
+                        <h3>
+                            eSIM QR Code
+                        </h3>
+
+                        {registeredSim?.qr_code ? (
+
+                            registeredSim.qr_code
+                                .startsWith("data:image") ||
+                            registeredSim.qr_code
+                                .startsWith("http") ? (
+
+                                <img
+                                    src={
+                                        registeredSim.qr_code
+                                    }
+                                    alt="eSIM QR Code"
+                                    style={{
+                                        width: 260,
+                                        height: 260,
+                                        objectFit:
+                                            "contain"
+                                    }}
+                                />
+
+                            ) : (
+
+                                <QRCodeCanvas
+                                    value={
+                                        registeredSim.qr_code
+                                    }
+                                    size={260}
+                                    level="M"
+                                />
+
+                            )
+
+                        ) : (
+
+                            <p>
+                                QR code is not available.
+                            </p>
+
+                        )}
+
+                    </div>
+                )}
+
+
+                {/* ====================================
+                    Physical SIM
+                ==================================== */}
+
+                {!registeredSim?.sim_type
+                    ?.toLowerCase()
+                    .includes("esim") && (
+
+                    <div className="physical-result">
+
+                        <h3>
+                            Physical SIM Activated
+                        </h3>
+
+                        <p>
+                            Your physical SIM has
+                            been approved and activated.
+                        </p>
+
+                        {registeredSim?.activation_code && (
+                            <p>
+                                <strong>
+                                    Activation Code:
+                                </strong>
+
+                                {" "}
+
+                                {registeredSim.activation_code}
+                            </p>
+                        )}
+
+                    </div>
+                )}
+
+
+                <button
+                    type="button"
+                    className="primary-registration-button"
+                    onClick={handleFinish}
+                >
+                    Finish
+                </button>
 
             </div>
+        )}
 
-          </div>
+    </div>
+)}
 
-          {/* eSIM information */}
-          <div className="info-card dark">
-
-            <div className="info-row">
-              <span>
-                Agent
-              </span>
-
-              <strong>
-                {agent?.agent_name || "-"}
-              </strong>
-            </div>
-
-            <div className="info-row">
-              <span>
-                Phone Number
-              </span>
-
-              <strong>
-                {registeredSim?.phone_number ||
-                  "-"}
-              </strong>
-            </div>
-
-            <div className="info-row">
-              <span>
-                IMSI
-              </span>
-
-              <strong>
-                {registeredSim?.imsi ||
-                  "-"}
-              </strong>
-            </div>
-
-            <div className="info-row">
-              <span>
-                ICCID
-              </span>
-
-              <strong>
-                {registeredSim?.iccid ||
-                  "-"}
-              </strong>
-            </div>
-
-            <div className="info-row">
-              <span>
-                SIM Type
-              </span>
-
-              <strong>
-                eSIM
-              </strong>
-            </div>
-
-            <div className="info-row">
-              <span>
-                Status
-              </span>
-
-              <span className="status-pending">
-                Pending Review
-              </span>
-            </div>
-
-          </div>
-
-          {/* Install Guide */}
-          <div className="install-guide">
-
-            <strong>
-              Next step
-            </strong>
-
-            <p>
-              The eSIM QR code will be
-              available after administrator
-              approval.
-            </p>
-
-            <p>
-              Please wait for the administrator
-              to approve your registration.
-            </p>
-
-          </div>
-
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={handleFinish}
-          >
-            Finish
-          </button>
-
-        </div>
-      )}
+      
 
     </div>
   );

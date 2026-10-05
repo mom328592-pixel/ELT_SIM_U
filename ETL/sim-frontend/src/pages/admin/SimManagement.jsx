@@ -30,7 +30,7 @@ function SimManagement() {
     id_sim_status: 1,
     imported_by: "",
     id_file: "",
-    link_url: "",
+    activation_code: "",
   });
 
   const currentUser = JSON.parse(
@@ -493,7 +493,7 @@ setPackages(packagesResponse.data || []);
                 </div>
 
                 <div className="form-group">
-    <label>Package</label>
+    <label>Package *</label>
 
     <select
         name="id_package"
@@ -512,8 +512,10 @@ setPackages(packagesResponse.data || []);
             >
                 {pkg.package_name}
                 {" - "}
-                {pkg.data_gb}GB /
+                {pkg.data_gb}GB /{" "}
                 {pkg.duration_days} Days
+                {" - "}
+                {pkg.price}
             </option>
         ))}
     </select>
@@ -580,15 +582,16 @@ setPackages(packagesResponse.data || []);
               </div>
 
               <div className="form-group">
-                <label>Link URL</label>
-                <input
-                  type="text"
-                  name="link_url"
-                  value={form.link_url}
-                  onChange={handleChange}
-                  placeholder="https://..."
-                />
-              </div>
+    <label>Activation Code</label>
+
+    <input
+        type="text"
+        name="activation_code"
+        value={form.activation_code}
+        onChange={handleChange}
+        placeholder="e.g. activation code"
+    />
+</div>
 
               <div className="modal-actions">
                 <button

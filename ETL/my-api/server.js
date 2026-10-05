@@ -285,7 +285,7 @@ app.use(
 app.use(
   "/reports",
   authenticateToken,
-  authorizeRoles(1),
+  authorizeRoles(1, 2),
   reportsRoutes
 );
 
