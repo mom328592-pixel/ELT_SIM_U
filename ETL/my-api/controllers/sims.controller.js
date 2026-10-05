@@ -20,9 +20,10 @@ const getAllSims = async (req, res) => {
         p.package_name,
         p.description AS package_description,
         p.data_gb AS package_data_gb,
-        p.duration_days AS package_duration_days,
+        p.validity_days AS package_duration_days,
         p.price AS package_price,
-        p.currency AS package_currency,
+        NULL AS package_currency,
+     
 
         s.id_sim_status,
         ss.sim_status,
@@ -100,7 +101,6 @@ const getSimById = async (req, res) => {
                 p.duration_days AS package_duration_days,
                 p.price AS package_price,
                 p.currency AS package_currency,
-                s.package,
                 s.phone_number,
 
                 s.id_sim_type,
@@ -118,7 +118,6 @@ const getSimById = async (req, res) => {
                 a.agent_name,
 
                 s.imported_at,
-                s.link_url,
                 s.created_at,
                 s.updated_at
 
@@ -252,7 +251,6 @@ const createSim = async (req, res) => {
                 p.duration_days AS package_duration_days,
                 p.price AS package_price,
                 p.currency AS package_currency,
-                s.package,
                 s.phone_number,
 
                 s.id_sim_type,
@@ -270,7 +268,6 @@ const createSim = async (req, res) => {
                 a.agent_name,
 
                 s.imported_at,
-                s.link_url,
                 s.created_at,
                 s.updated_at
 
@@ -368,19 +365,22 @@ const updateSim = async (req, res) => {
         }
 
      const [result] = await pool.query(`
-    INSERT INTO sim_cards (
-        iccid,
-        imsi,
-        qr_code,
-        activation_code,
-        phone_number,
-        id_sim_type,
-        id_package,
-        id_sim_status,
-        imported_by,
-        id_file,
-        imported_at
-    )
+    UPDATE sim_cards
+SET
+    iccid = ?,
+    imsi = ?,
+    qr_code = ?,
+    activation_code = ?,
+    phone_number = ?,
+    id_sim_type = ?,
+    id_package = ?,
+    id_sim_status = ?,
+    imported_by = ?,
+    id_file = ?,
+    imported_at = ?,
+    updated_at = NOW()
+WHERE id_sim = ?
+  AND deleted_at IS NULL
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `, [
     iccid,
@@ -414,7 +414,6 @@ const updateSim = async (req, res) => {
                 p.duration_days AS package_duration_days,
                 p.price AS package_price,
                 p.currency AS package_currency,
-                s.package,
                 s.phone_number,
 
                 s.id_sim_type,
@@ -432,7 +431,6 @@ const updateSim = async (req, res) => {
                 a.agent_name,
 
                 s.imported_at,
-                s.link_url,
                 s.created_at,
                 s.updated_at
 
@@ -536,14 +534,12 @@ const getAvailableSims = async (req, res) => {
                 p.duration_days AS package_duration_days,
                 p.price AS package_price,
                 p.currency AS package_currency,
-                s.package,
                 s.phone_number,
                 s.id_sim_type,
                 st.sim_type,
                 s.id_sim_status,
                 ss.sim_status,
                 s.imported_at,
-                s.link_url,
                 s.created_at,
                 s.updated_at
             FROM sim_cards s

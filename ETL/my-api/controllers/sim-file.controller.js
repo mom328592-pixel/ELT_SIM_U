@@ -468,19 +468,22 @@ const uploadSimFile = async (req, res) => {
             try {
                 const [result] = await connection.query(
                     `
-                    INSERT INTO sim_cards (
-                        iccid,
-                        imsi,
-                        qr_code,
-                        id_package,
-                        phone_number,
-                        id_sim_type,
-                        id_sim_status,
-                        imported_by,
-                        id_file,
-                        imported_at,
-                        link_url
-                    )
+                    UPDATE sim_cards
+SET
+    iccid = ?,
+    imsi = ?,
+    qr_code = ?,
+    activation_code = ?,
+    phone_number = ?,
+    id_sim_type = ?,
+    id_package = ?,
+    id_sim_status = ?,
+    imported_by = ?,
+    id_file = ?,
+    imported_at = ?,
+    updated_at = NOW()
+WHERE id_sim = ?
+  AND deleted_at IS NULL
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
                     `,
                     [

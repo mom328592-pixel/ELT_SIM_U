@@ -38,9 +38,9 @@ const getAllRegistrations = async (req, res) => {
 
                 p.package_name,
                 p.data_gb AS package_data_gb,
-                p.duration_days AS package_duration_days,
+                p.validity_days AS package_duration_days,
                 p.price AS package_price,
-                p.currency AS package_currency,
+                NULL AS package_currency,
 
                 r.id_agent,
                 a.agent_name,
@@ -134,9 +134,9 @@ const getAvailableSims = async (req, res) => {
 
                 p.package_name,
                 p.data_gb AS package_data_gb,
-                p.duration_days AS package_duration_days,
+                p.validity_days AS package_duration_days,
                 p.price AS package_price,
-                p.currency AS package_currency
+                NULL AS package_currency,
 
             FROM sim_cards s
 
@@ -219,9 +219,9 @@ const getRegistrationById = async (req, res) => {
 
                 p.package_name,
                 p.data_gb AS package_data_gb,
-                p.duration_days AS package_duration_days,
+                p.validity_days AS package_duration_days,
                 p.price AS package_price,
-                p.currency AS package_currency,
+                NULL AS package_currency,,
 
                 r.id_agent,
                 a.agent_name,
@@ -345,9 +345,8 @@ const createRegistration = async (req, res) => {
 
                     p.package_name,
                     p.data_gb,
-                    p.duration_days,
-                    p.price,
-                    p.currency
+                    p.validity_days,
+                    p.price
 
                 FROM sim_cards s
 
@@ -490,12 +489,10 @@ const createRegistration = async (req, res) => {
                     p.package_name,
                     p.data_gb
                         AS package_data_gb,
-                    p.duration_days
-                        AS package_duration_days,
+                    p.validity_days
+                        AS package_validity_days,
                     p.price
                         AS package_price,
-                    p.currency
-                        AS package_currency,
 
                     r.id_agent,
                     a.agent_name,
@@ -785,12 +782,10 @@ const updateRegistration = async (req, res) => {
                     p.package_name,
                     p.data_gb
                         AS package_data_gb,
-                    p.duration_days
-                        AS package_duration_days,
+                    p.validity_days
+                        AS package_validity_days,
                     p.price
                         AS package_price,
-                    p.currency
-                        AS package_currency,
 
                     r.id_agent,
                     a.agent_name,

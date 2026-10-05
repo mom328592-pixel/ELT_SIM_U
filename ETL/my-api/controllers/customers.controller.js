@@ -15,7 +15,6 @@ const getAllCustomers = async (req, res) => {
                 date_of_birth,
                 passport_expiry_date,
                 phone_number,
-                selfie_photo,
                 passport_photo,
                 created_at,
                 updated_at
@@ -58,7 +57,6 @@ const getCustomerById = async (req, res) => {
                 date_of_birth,
                 passport_expiry_date,
                 phone_number,
-                selfie_photo,
                 passport_photo,
                 created_at,
                 updated_at
@@ -104,7 +102,6 @@ const createCustomer = async (req, res) => {
             date_of_birth,
             passport_expiry_date,
             phone_number,
-            selfie_photo,
             passport_photo
         } = req.body;
 
@@ -124,7 +121,6 @@ const createCustomer = async (req, res) => {
                 date_of_birth,
                 passport_expiry_date,
                 phone_number,
-                selfie_photo,
                 passport_photo
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -149,8 +145,7 @@ const createCustomer = async (req, res) => {
                 nationality,
                 date_of_birth,
                 passport_expiry_date,
-                phone_number,
-                selfie_photo,
+                phone_number, 
                 passport_photo,
                 created_at,
                 updated_at
@@ -191,7 +186,6 @@ const updateCustomer = async (req, res) => {
             date_of_birth,
             passport_expiry_date,
             phone_number,
-            selfie_photo,
             passport_photo
         } = req.body;
 
@@ -245,7 +239,6 @@ const updateCustomer = async (req, res) => {
                 date_of_birth,
                 passport_expiry_date,
                 phone_number,
-                selfie_photo,
                 passport_photo,
                 created_at,
                 updated_at
