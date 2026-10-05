@@ -219,7 +219,7 @@ const importSims = async (req, res) => {
                     iccid,
                     imsi,
                     qr_code,
-                    package,
+                    id_package,
                     phone_number,
                     id_sim_type,
                     id_sim_status,
@@ -233,7 +233,7 @@ const importSims = async (req, res) => {
                 sim.iccid,
                 sim.imsi,
                 sim.qr_code || null,
-                sim.package || null,
+                sim.id_package || null,
                 sim.phone_number || null,
                 sim.id_sim_type || null,
                 sim.id_sim_status || 1,
@@ -448,7 +448,7 @@ const uploadSimFile = async (req, res) => {
             const rawImsi = getVal("imsi");
             const rawPhone = getVal("phone_number") || getVal("phone");
             const rawQr = getVal("qr_code") || getVal("qr");
-            const rawPackage = getVal("package");
+            const rawPackage = getVal("id_package");
             const rawSimType = getVal("id_sim_type");
             const rawSimStatus = getVal("id_sim_status");
 
@@ -472,7 +472,7 @@ const uploadSimFile = async (req, res) => {
                         iccid,
                         imsi,
                         qr_code,
-                        package,
+                        id_package,
                         phone_number,
                         id_sim_type,
                         id_sim_status,

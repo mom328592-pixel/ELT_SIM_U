@@ -87,7 +87,7 @@ const getFileHistoryById = async (req, res) => {
                 s.id_sim_type,
                 s.id_sim_status,
                 st.id_sim_status AS sim_status_name,
-                s.package,
+                s.id_package,
                 s.qr_code,
                 s.imported_at,
                 s.created_at
