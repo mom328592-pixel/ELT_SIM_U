@@ -1,9 +1,9 @@
 const crypto = require("crypto");
 const pool = require("../db");
+const { createAuditLog } = require("../utils/audit");
 
 const FRONTEND_URL =
     process.env.FRONTEND_URL || "https://eltsimu.vercel.app";
-
 
 // ======================================================
 // CREATE PUBLIC TOKEN
@@ -11,9 +11,6 @@ const FRONTEND_URL =
 const generatePublicToken = () => {
     return crypto.randomBytes(32).toString("hex");
 };
-const {
-    createAuditLog
-} = require("../utils/audit");
 
 // ======================================================
 // PUBLIC URL
@@ -21,7 +18,6 @@ const {
 const getPublicUrl = (token) => {
     return `${FRONTEND_URL.replace(/\/$/, "")}/customer-registration/${token}`;
 };
-
 
 // ======================================================
 // GET ALL AGENTS
@@ -101,7 +97,6 @@ const getAllAgents = async (req, res) => {
     }
 };
 
-
 // ======================================================
 // GET AGENT BY ID
 // ======================================================
@@ -158,7 +153,6 @@ const getAgentById = async (req, res) => {
     }
 };
 
-
 // ======================================================
 // CREATE AGENT
 // ======================================================
@@ -200,6 +194,17 @@ const createAgent = async (req, res) => {
             createdBy
         ]);
 
+        // Audit log ຖືກຍ້າຍມາໄວ້ໃນ Function
+        await createAuditLog({
+            req,
+            action: "CREATE",
+            targetEntity: "agents",
+            targetId: result.insertId,
+            metadata: {
+                agent_name
+            }
+        }).catch(console.error);
+
         res.status(201).json({
             success: true,
             message: "Agent created successfully",
@@ -219,15 +224,6 @@ const createAgent = async (req, res) => {
         });
     }
 };
-await createAuditLog({
-    req,
-    action: "CREATE",
-    targetEntity: "agents",
-    targetId: result.insertId,
-    metadata: {
-        agent_name
-    }
-}).catch(console.error);
 
 // ======================================================
 // UPDATE AGENT
@@ -274,6 +270,17 @@ const updateAgent = async (req, res) => {
             });
         }
 
+        // Audit log ຖືກຍ້າຍມາໄວ້ໃນ Function
+        await createAuditLog({
+            req,
+            action: "UPDATE",
+            targetEntity: "agents",
+            targetId: id,
+            metadata: {
+                agent_name
+            }
+        }).catch(console.error);
+
         res.json({
             success: true,
             message: "Agent updated successfully"
@@ -288,27 +295,6 @@ const updateAgent = async (req, res) => {
         });
     }
 };
-await createAuditLog({
-    req,
-    action: "UPDATE",
-    targetEntity: "agents",
-    targetId: id,
-    metadata: {
-        agent_name
-    }
-}).catch(console.error);
-await createAuditLog({
-    req,
-    action: "REGENERATE_PUBLIC_LINK",
-    targetEntity: "agents",
-    targetId: id
-}).catch(console.error);
-await createAuditLog({
-    req,
-    action: "DELETE",
-    targetEntity: "agents",
-    targetId: id
-}).catch(console.error);
 
 // ======================================================
 // REGENERATE PUBLIC LINK
@@ -336,6 +322,14 @@ const regeneratePublicLink = async (req, res) => {
             });
         }
 
+        // Audit log ຖືກຍ້າຍມາໄວ້ໃນ Function
+        await createAuditLog({
+            req,
+            action: "REGENERATE_PUBLIC_LINK",
+            targetEntity: "agents",
+            targetId: id
+        }).catch(console.error);
+
         res.json({
             success: true,
             message: "Agent public link regenerated",
@@ -354,7 +348,6 @@ const regeneratePublicLink = async (req, res) => {
         });
     }
 };
-
 
 // ======================================================
 // DELETE AGENT
@@ -377,6 +370,14 @@ const deleteAgent = async (req, res) => {
             });
         }
 
+        // Audit log ຖືກຍ້າຍມາໄວ້ໃນ Function
+        await createAuditLog({
+            req,
+            action: "DELETE",
+            targetEntity: "agents",
+            targetId: id
+        }).catch(console.error);
+
         res.json({
             success: true,
             message: "Agent deleted successfully"
@@ -391,7 +392,6 @@ const deleteAgent = async (req, res) => {
         });
     }
 };
-
 
 module.exports = {
     getAllAgents,
