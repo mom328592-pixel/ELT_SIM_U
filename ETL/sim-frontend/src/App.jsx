@@ -14,43 +14,54 @@ import {
 
 import "./App.css";
 
-// =========================
-// Layouts
-// =========================
+// =====================================================
+// LAYOUTS
+// =====================================================
+
 import AdminLayout from "./layouts/AdminLayout";
 import CustomerLayout from "./layouts/CustomerLayout";
 
-// =========================
-// Admin Pages
-// =========================
+// =====================================================
+// ADMIN PAGES
+// =====================================================
+
 import Dashboard from "./pages/admin/Dashboard";
 import Management from "./pages/admin/Management";
 import SimCenter from "./pages/admin/SimCenter";
 import Registrations from "./pages/admin/Registrations";
 import Reports from "./pages/admin/Reports";
-
 import AdminSettings from "./pages/admin/AdminSettings";
 
-// =========================
-// Customer
-// =========================
+// =====================================================
+// CUSTOMER
+// =====================================================
+
 import CustomerRegistration from "./pages/customer/CustomerRegistration";
 
-// =========================
-// Components
-// =========================
+// =====================================================
+// COMPONENT
+// =====================================================
+
 import Toast from "./components/Toast";
 
-// =========================
-// Constants
-// =========================
-const IDLE_TIME = 15 * 60 * 1000;
-const WARNING_TIME = 13 * 60 * 1000;
+// =====================================================
+// CONSTANTS
+// =====================================================
 
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  "https://eltsimu.onrender.com";
 
-// ======================================================
-// Protected Route
-// ======================================================
+const IDLE_TIME =
+  15 * 60 * 1000;
+
+const WARNING_TIME =
+  13 * 60 * 1000;
+
+// =====================================================
+// PROTECTED ROUTE
+// =====================================================
+
 const ProtectedRoute = ({
   user,
   allowedRoles,
@@ -66,12 +77,15 @@ const ProtectedRoute = ({
   }
 
   const roleId = Number(
-    user.id_role ?? user.role_id
+    user.id_role ??
+      user.role_id
   );
 
   if (
     allowedRoles &&
-    !allowedRoles.includes(roleId)
+    !allowedRoles.includes(
+      roleId
+    )
   ) {
     return (
       <Navigate
@@ -84,10 +98,10 @@ const ProtectedRoute = ({
   return children;
 };
 
+// =====================================================
+// LOGIN PAGE
+// =====================================================
 
-// ======================================================
-// Login Page
-// ======================================================
 const LoginPage = ({
   username,
   password,
@@ -98,6 +112,7 @@ const LoginPage = ({
 }) => {
   return (
     <div className="login-page">
+
       <div className="login-card">
 
         <div className="login-icon">
@@ -112,7 +127,11 @@ const LoginPage = ({
           SIM Registration System
         </p>
 
-        <form onSubmit={handleLogin}>
+        <form
+          onSubmit={
+            handleLogin
+          }
+        >
 
           <label>
             Username
@@ -120,7 +139,9 @@ const LoginPage = ({
 
           <input
             type="text"
-            value={username}
+            value={
+              username
+            }
             placeholder="Enter username"
             onChange={(e) =>
               setUsername(
@@ -136,7 +157,9 @@ const LoginPage = ({
 
           <input
             type="password"
-            value={password}
+            value={
+              password
+            }
             placeholder="Enter password"
             onChange={(e) =>
               setPassword(
@@ -146,7 +169,9 @@ const LoginPage = ({
             required
           />
 
-          <button type="submit">
+          <button
+            type="submit"
+          >
             Login
           </button>
 
@@ -159,14 +184,15 @@ const LoginPage = ({
         )}
 
       </div>
+
     </div>
   );
 };
 
+// =====================================================
+// APP
+// =====================================================
 
-// ======================================================
-// App
-// ======================================================
 function App() {
   const [
     username,
@@ -191,9 +217,10 @@ function App() {
     type: "success",
   });
 
-  // =========================
-  // Auth
-  // =========================
+  // ===================================================
+  // AUTH STATE
+  // ===================================================
+
   const [
     loggedIn,
     setLoggedIn,
@@ -220,62 +247,126 @@ function App() {
         );
 
       return savedUser
-        ? JSON.parse(savedUser)
+        ? JSON.parse(
+            savedUser
+          )
         : null;
     } catch {
       return null;
     }
   });
 
-  // =========================
-  // Toast
-  // =========================
-  const showToast = useCallback(
-    (
-      toastMessage,
-      type = "success"
-    ) => {
-      setToast({
-        message: toastMessage,
-        type,
-      });
-    },
-    []
-  );
+  // ===================================================
+  // TOAST
+  // ===================================================
 
-  // =========================
-  // Logout
-  // =========================
-  const logout = useCallback(() => {
-    try {
-      localStorage.removeItem(
-        "access_token"
-      );
+  const showToast =
+    useCallback(
+      (
+        toastMessage,
+        type = "success"
+      ) => {
+        setToast({
+          message:
+            toastMessage,
+          type,
+        });
+      },
+      []
+    );
 
-      localStorage.removeItem(
-        "refresh_token"
-      );
+  // ===================================================
+  // CLEAR LOCAL AUTH
+  // ===================================================
 
-      localStorage.removeItem(
-        "user"
-      );
-    } catch (error) {
-      console.error(
-        "LOGOUT STORAGE ERROR:",
-        error
-      );
-    }
+  const clearLocalAuth =
+    useCallback(() => {
+      try {
+        localStorage.removeItem(
+          "access_token"
+        );
 
-    setLoggedIn(false);
-    setUser(null);
-    setUsername("");
-    setPassword("");
-    setMessage("");
-  }, []);
+        localStorage.removeItem(
+          "refresh_token"
+        );
 
-  // =========================
-  // Auto Logout
-  // =========================
+        localStorage.removeItem(
+          "user"
+        );
+      } catch (error) {
+        console.error(
+          "CLEAR AUTH STORAGE ERROR:",
+          error
+        );
+      }
+
+      setLoggedIn(false);
+      setUser(null);
+      setUsername("");
+      setPassword("");
+      setMessage("");
+    }, []);
+
+  // ===================================================
+  // LOGOUT
+  // ===================================================
+
+  const logout =
+    useCallback(
+      async () => {
+        const refreshToken =
+          localStorage.getItem(
+            "refresh_token"
+          );
+
+        try {
+          if (
+            refreshToken
+          ) {
+            await fetch(
+              `${API_URL}/auth/logout`,
+              {
+                method:
+                  "POST",
+
+                headers: {
+                  "Content-Type":
+                    "application/json",
+
+                  Authorization:
+                    localStorage.getItem(
+                      "access_token"
+                    )
+                      ? `Bearer ${localStorage.getItem(
+                          "access_token"
+                        )}`
+                      : "",
+                },
+
+                body:
+                  JSON.stringify({
+                    refresh_token:
+                      refreshToken,
+                  }),
+              }
+            );
+          }
+        } catch (error) {
+          console.error(
+            "LOGOUT API ERROR:",
+            error
+          );
+        } finally {
+          clearLocalAuth();
+        }
+      },
+      [clearLocalAuth]
+    );
+
+  // ===================================================
+  // AUTO LOGOUT
+  // ===================================================
+
   const idleTimerRef =
     useRef(null);
 
@@ -287,33 +378,40 @@ function App() {
       return;
     }
 
-    const resetIdleTimer = () => {
-      clearTimeout(
-        idleTimerRef.current
-      );
+    const resetIdleTimer =
+      () => {
+        clearTimeout(
+          idleTimerRef.current
+        );
 
-      clearTimeout(
-        warningTimerRef.current
-      );
+        clearTimeout(
+          warningTimerRef.current
+        );
 
-      warningTimerRef.current =
-        setTimeout(() => {
-          showToast(
-            "You will be logged out after 2 minutes of inactivity.",
-            "warning"
+        warningTimerRef.current =
+          setTimeout(
+            () => {
+              showToast(
+                "You will be logged out after 2 minutes of inactivity.",
+                "warning"
+              );
+            },
+            WARNING_TIME
           );
-        }, WARNING_TIME);
 
-      idleTimerRef.current =
-        setTimeout(() => {
-          logout();
+        idleTimerRef.current =
+          setTimeout(
+            () => {
+              clearLocalAuth();
 
-          showToast(
-            "You have been logged out due to inactivity.",
-            "warning"
+              showToast(
+                "You have been logged out due to inactivity.",
+                "warning"
+              );
+            },
+            IDLE_TIME
           );
-        }, IDLE_TIME);
-    };
+      };
 
     const events = [
       "mousemove",
@@ -324,12 +422,14 @@ function App() {
       "click",
     ];
 
-    events.forEach((event) => {
-      window.addEventListener(
-        event,
-        resetIdleTimer
-      );
-    });
+    events.forEach(
+      (event) => {
+        window.addEventListener(
+          event,
+          resetIdleTimer
+        );
+      }
+    );
 
     resetIdleTimer();
 
@@ -342,131 +442,152 @@ function App() {
         warningTimerRef.current
       );
 
-      events.forEach((event) => {
-        window.removeEventListener(
-          event,
-          resetIdleTimer
-        );
-      });
+      events.forEach(
+        (event) => {
+          window.removeEventListener(
+            event,
+            resetIdleTimer
+          );
+        }
+      );
     };
   }, [
     loggedIn,
-    logout,
+    clearLocalAuth,
     showToast,
   ]);
 
-  // =========================
-  // Login
-  // =========================
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  // ===================================================
+  // LOGIN
+  // ===================================================
 
-    setMessage("");
+  const handleLogin =
+    async (event) => {
+      event.preventDefault();
 
-    try {
-      const response =
-        await fetch(
-          "https://eltsimu.onrender.com/auth/login",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body: JSON.stringify({
-              username:
-                username.trim(),
-              password,
-            }),
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        setMessage(
-          data.message ||
-            "Login failed"
-        );
-
-        return;
-      }
-
-      const accessToken =
-        data?.data?.access_token;
-
-      const refreshToken =
-        data?.data?.refresh_token;
-
-      const userData =
-        data?.data?.user;
-
-      if (
-        !accessToken ||
-        !userData
-      ) {
-        setMessage(
-          "Invalid login response from server"
-        );
-
-        return;
-      }
-
-      localStorage.setItem(
-        "access_token",
-        accessToken
-      );
-
-      if (refreshToken) {
-        localStorage.setItem(
-          "refresh_token",
-          refreshToken
-        );
-      }
-
-      localStorage.setItem(
-        "user",
-        JSON.stringify(
-          userData
-        )
-      );
-
-      setUser(userData);
-      setLoggedIn(true);
-
-      setUsername("");
-      setPassword("");
       setMessage("");
 
-      showToast(
-        "Login successful",
-        "success"
-      );
+      try {
+        const response =
+          await fetch(
+            `${API_URL}/auth/login`,
+            {
+              method:
+                "POST",
 
-    } catch (error) {
-      console.error(
-        "LOGIN ERROR:",
-        error
-      );
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
 
-      setMessage(
-        error?.message ||
-          "Cannot connect to API."
-      );
-    }
-  };
+              body:
+                JSON.stringify({
+                  username:
+                    username.trim(),
 
+                  password,
+                }),
+            }
+          );
+
+        const data =
+          await response.json();
+
+        if (!response.ok) {
+          setMessage(
+            data.message ||
+              "Login failed"
+          );
+
+          return;
+        }
+
+        const accessToken =
+          data?.data
+            ?.access_token;
+
+        const refreshToken =
+          data?.data
+            ?.refresh_token;
+
+        const userData =
+          data?.data?.user;
+
+        if (
+          !accessToken ||
+          !userData
+        ) {
+          setMessage(
+            "Invalid login response from server"
+          );
+
+          return;
+        }
+
+        localStorage.setItem(
+          "access_token",
+          accessToken
+        );
+
+        if (
+          refreshToken
+        ) {
+          localStorage.setItem(
+            "refresh_token",
+            refreshToken
+          );
+        }
+
+        localStorage.setItem(
+          "user",
+          JSON.stringify(
+            userData
+          )
+        );
+
+        setUser(
+          userData
+        );
+
+        setLoggedIn(
+          true
+        );
+
+        setUsername("");
+        setPassword("");
+        setMessage("");
+
+        showToast(
+          "Login successful",
+          "success"
+        );
+      } catch (error) {
+        console.error(
+          "LOGIN ERROR:",
+          error
+        );
+
+        setMessage(
+          error?.message ||
+            "Cannot connect to API."
+        );
+      }
+    };
+
+  // ===================================================
+  // RENDER
+  // ===================================================
 
   return (
     <BrowserRouter>
 
-      {/* =========================
-          GLOBAL TOAST
-      ========================= */}
       <Toast
-        message={toast.message}
-        type={toast.type}
+        message={
+          toast.message
+        }
+        type={
+          toast.type
+        }
         onClose={() =>
           setToast({
             message: "",
@@ -477,23 +598,23 @@ function App() {
 
       <Routes>
 
-        {/* ==================================================
-            CUSTOMER PORTAL
-            Public - no Admin Login required
-        ================================================== */}
+        {/* =================================================
+            PUBLIC CUSTOMER REGISTRATION
+        ================================================= */}
+
         <Route
-  path="/customer-registration/:agentToken"
-  element={
-    <CustomerLayout>
-      <CustomerRegistration />
-    </CustomerLayout>
-  }
-/>
+          path="/customer-registration/:agentToken"
+          element={
+            <CustomerLayout>
+              <CustomerRegistration />
+            </CustomerLayout>
+          }
+        />
 
-
-        {/* ==================================================
+        {/* =================================================
             LOGIN
-        ================================================== */}
+        ================================================= */}
+
         <Route
           path="/"
           element={
@@ -504,8 +625,12 @@ function App() {
               />
             ) : (
               <LoginPage
-                username={username}
-                password={password}
+                username={
+                  username
+                }
+                password={
+                  password
+                }
                 setUsername={
                   setUsername
                 }
@@ -515,16 +640,18 @@ function App() {
                 handleLogin={
                   handleLogin
                 }
-                message={message}
+                message={
+                  message
+                }
               />
             )
           }
         />
 
-
-        {/* ==================================================
+        {/* =================================================
             DASHBOARD
-        ================================================== */}
+        ================================================= */}
+
         <Route
           path="/dashboard"
           element={
@@ -538,7 +665,9 @@ function App() {
             >
               <AdminLayout
                 user={user}
-                onLogout={logout}
+                onLogout={
+                  logout
+                }
               >
                 <Dashboard
                   showToast={
@@ -550,10 +679,10 @@ function App() {
           }
         />
 
-
-        {/* ==================================================
+        {/* =================================================
             REGISTRATIONS
-        ================================================== */}
+        ================================================= */}
+
         <Route
           path="/registrations"
           element={
@@ -567,7 +696,9 @@ function App() {
             >
               <AdminLayout
                 user={user}
-                onLogout={logout}
+                onLogout={
+                  logout
+                }
               >
                 <Registrations
                   showToast={
@@ -579,49 +710,78 @@ function App() {
           }
         />
 
-
-
-        {/* ==================================================
+        {/* =================================================
             SIM CENTER
-        ================================================== */}
+        ================================================= */}
+
         <Route
           path="/sim-center"
           element={
-            <ProtectedRoute user={user} allowedRoles={[1, 2]}>
-              <AdminLayout user={user} onLogout={logout}>
+            <ProtectedRoute
+              user={user}
+              allowedRoles={[
+                1,
+                2,
+              ]}
+            >
+              <AdminLayout
+                user={user}
+                onLogout={
+                  logout
+                }
+              >
                 <SimCenter />
               </AdminLayout>
             </ProtectedRoute>
           }
         />
 
-        {/* ==================================================
+        {/* =================================================
             PEOPLE & ACCESS
-        ================================================== */}
+        ================================================= */}
+
         <Route
           path="/management"
           element={
-            <ProtectedRoute user={user} allowedRoles={[1, 2, 3]}>
-              <AdminLayout user={user} onLogout={logout}>
+            <ProtectedRoute
+              user={user}
+              allowedRoles={[
+                1,
+                2,
+                3,
+              ]}
+            >
+              <AdminLayout
+                user={user}
+                onLogout={
+                  logout
+                }
+              >
                 <Management />
               </AdminLayout>
             </ProtectedRoute>
           }
         />
 
-        {/* ==================================================
+        {/* =================================================
             REPORTS
-        ================================================== */}
+        ================================================= */}
+
         <Route
           path="/reports"
           element={
             <ProtectedRoute
               user={user}
-              allowedRoles={[1, 2]}
+              allowedRoles={[
+                1,
+                2,
+              ]}
             >
               <AdminLayout
                 user={user}
-                onLogout={logout}
+                onLogout={
+                  logout
+                }
               >
                 <Reports
                   showToast={
@@ -633,20 +793,26 @@ function App() {
           }
         />
 
-
-        {/* ==================================================
+        {/* =================================================
             SETTINGS
-        ================================================== */}
+        ================================================= */}
+
         <Route
           path="/settings"
           element={
             <ProtectedRoute
               user={user}
-              allowedRoles={[1, 2, 3]}
+              allowedRoles={[
+                1,
+                2,
+                3,
+              ]}
             >
               <AdminLayout
                 user={user}
-                onLogout={logout}
+                onLogout={
+                  logout
+                }
               >
                 <AdminSettings />
               </AdminLayout>
@@ -654,10 +820,10 @@ function App() {
           }
         />
 
-
-        {/* ==================================================
+        {/* =================================================
             FALLBACK
-        ================================================== */}
+        ================================================= */}
+
         <Route
           path="*"
           element={

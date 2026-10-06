@@ -1,7 +1,6 @@
 const pool = require("../db");
 const { createAuditLog } = require("../utils/audit");
 
-
 // =====================================================
 // COMMON SELECT
 // =====================================================
@@ -63,6 +62,33 @@ const SIM_SELECT = `
 
 
 // =====================================================
+// NORMALIZE STATUS
+// =====================================================
+
+const normalizeStatus = (value) => {
+    return String(value || "")
+        .trim()
+        .toLowerCase();
+};
+
+
+// =====================================================
+// AVAILABLE STATUS
+// =====================================================
+
+const isAvailableStatus = (value) => {
+    return [
+        "available",
+        "ready for sale",
+        "ready_to_sale",
+        "ready-to-sale",
+        "ວ່າງ",
+        "ພ້ອມຂາຍ"
+    ].includes(normalizeStatus(value));
+};
+
+
+// =====================================================
 // VALIDATE PACKAGE
 // =====================================================
 
@@ -71,12 +97,12 @@ const validatePackage = async (
     id_package,
     id_sim_type
 ) => {
-
     if (!id_package) {
-        return;
+        return null;
     }
 
-    const [rows] = await connection.query(`
+    const [rows] = await connection.query(
+        `
         SELECT
             p.id_package,
             p.package_name,
@@ -86,36 +112,38 @@ const validatePackage = async (
         WHERE p.id_package = ?
           AND p.status = 1
         LIMIT 1
-    `, [id_package]);
+        `,
+        [id_package]
+    );
 
     if (!rows.length) {
-        throw new Error(
-            "Package not found or inactive"
-        );
+        throw new Error("Package not found or inactive");
     }
 
     if (id_sim_type) {
-
-        const [typeRows] = await connection.query(`
-            SELECT sim_type
+        const [typeRows] = await connection.query(
+            `
+            SELECT
+                id_sim_type,
+                sim_type
             FROM sim_types
             WHERE id_sim_type = ?
             LIMIT 1
-        `, [id_sim_type]);
+            `,
+            [id_sim_type]
+        );
 
         if (!typeRows.length) {
             throw new Error("SIM type not found");
         }
 
-        const packageType =
-            String(rows[0].package_sim_type || "")
-                .trim()
-                .toLowerCase();
+        const packageType = normalizeStatus(
+            rows[0].package_sim_type
+        );
 
-        const simType =
-            String(typeRows[0].sim_type || "")
-                .trim()
-                .toLowerCase();
+        const simType = normalizeStatus(
+            typeRows[0].sim_type
+        );
 
         if (
             packageType &&
@@ -137,32 +165,25 @@ const validatePackage = async (
 // =====================================================
 
 const getAllSims = async (req, res) => {
-
     try {
-
         const [rows] = await pool.query(`
             ${SIM_SELECT}
             WHERE s.deleted_at IS NULL
             ORDER BY s.id_sim ASC
         `);
 
-        res.json({
+        return res.json({
             success: true,
             message: "SIM cards retrieved successfully",
             data: rows
         });
 
     } catch (error) {
+        console.error("GET ALL SIMS ERROR:", error);
 
-        console.error(
-            "GET ALL SIMS ERROR:",
-            error
-        );
-
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
-            message: "Database error",
-            error: error.message
+            message: "Database error"
         });
     }
 };
@@ -173,42 +194,37 @@ const getAllSims = async (req, res) => {
 // =====================================================
 
 const getSimById = async (req, res) => {
-
     try {
-
         const { id } = req.params;
 
-        const [rows] = await pool.query(`
+        const [rows] = await pool.query(
+            `
             ${SIM_SELECT}
             WHERE s.id_sim = ?
               AND s.deleted_at IS NULL
             LIMIT 1
-        `, [id]);
+            `,
+            [id]
+        );
 
         if (!rows.length) {
-
             return res.status(404).json({
                 success: false,
                 message: "SIM card not found"
             });
         }
 
-        res.json({
+        return res.json({
             success: true,
             data: rows[0]
         });
 
     } catch (error) {
+        console.error("GET SIM BY ID ERROR:", error);
 
-        console.error(
-            "GET SIM BY ID ERROR:",
-            error
-        );
-
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
-            message: "Database error",
-            error: error.message
+            message: "Database error"
         });
     }
 };
@@ -219,9 +235,9 @@ const getSimById = async (req, res) => {
 // =====================================================
 
 const createSim = async (req, res) => {
+    let connection;
 
     try {
-
         const {
             iccid,
             imsi,
@@ -235,16 +251,17 @@ const createSim = async (req, res) => {
             imported_at
         } = req.body;
 
-        if (!String(iccid || "").trim()) {
+        const cleanIccid = String(iccid || "").trim();
+        const cleanImsi = String(imsi || "").trim();
 
+        if (!cleanIccid) {
             return res.status(400).json({
                 success: false,
                 message: "ICCID is required"
             });
         }
 
-        if (!String(imsi || "").trim()) {
-
+        if (!cleanImsi) {
             return res.status(400).json({
                 success: false,
                 message: "IMSI is required"
@@ -252,133 +269,117 @@ const createSim = async (req, res) => {
         }
 
         if (!id_package) {
-
             return res.status(400).json({
                 success: false,
                 message: "Package is required for SIM"
             });
         }
 
-        const connection =
-            await pool.getConnection();
+        connection = await pool.getConnection();
 
-        try {
-
-            await validatePackage(
-                connection,
-                Number(id_package),
-                id_sim_type
-            );
-
-            if (id_file) {
-
-                const [fileRows] =
-                    await connection.query(`
-                        SELECT id_file
-                        FROM history_sim_card_file
-                        WHERE id_file = ?
-                        LIMIT 1
-                    `, [id_file]);
-
-                if (!fileRows.length) {
-
-                    connection.release();
-
-                    return res.status(404).json({
-                        success: false,
-                        message: "File history not found"
-                    });
-                }
-            }
-
-            const [result] =
-                await connection.query(`
-                    INSERT INTO sim_cards (
-                        iccid,
-                        imsi,
-                        qr_code,
-                        activation_code,
-                        phone_number,
-                        id_sim_type,
-                        id_package,
-                        id_sim_status,
-                        imported_by,
-                        id_file,
-                        imported_at
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                `, [
-                    String(iccid).trim(),
-                    String(imsi).trim(),
-                    qr_code || null,
-                    activation_code || null,
-                    phone_number || null,
-                    id_sim_type || null,
-                    Number(id_package),
-                    id_sim_status || 1,
-                    req.user?.id_user || null,
-                    id_file || null,
-                    imported_at || null
-                ]);
-
-            await connection.commit().catch(() => {});
-
-            const [rows] =
-                await connection.query(`
-                    ${SIM_SELECT}
-                    WHERE s.id_sim = ?
-                    LIMIT 1
-                `, [result.insertId]);
-
-            connection.release();
-
-            await createAuditLog({
-                req,
-                action: "CREATE",
-                targetEntity: "sim_cards",
-                targetId: result.insertId,
-                metadata: {
-                    iccid: String(iccid).trim(),
-                    imsi: String(imsi).trim(),
-                    id_package: Number(id_package)
-                }
-            }).catch(console.error);
-
-            return res.status(201).json({
-                success: true,
-                message: "SIM card created successfully",
-                data: rows[0]
-            });
-
-        } catch (error) {
-
-            try {
-                connection.release();
-            } catch {}
-
-            throw error;
-        }
-
-    } catch (error) {
-
-        console.error(
-            "CREATE SIM ERROR:",
-            error
+        await validatePackage(
+            connection,
+            Number(id_package),
+            id_sim_type
         );
 
-        if (error.code === "ER_DUP_ENTRY") {
+        if (id_file) {
+            const [fileRows] = await connection.query(
+                `
+                SELECT id_file
+                FROM history_sim_card_file
+                WHERE id_file = ?
+                LIMIT 1
+                `,
+                [id_file]
+            );
 
+            if (!fileRows.length) {
+                return res.status(404).json({
+                    success: false,
+                    message: "File history not found"
+                });
+            }
+        }
+
+        const [result] = await connection.query(
+            `
+            INSERT INTO sim_cards (
+                iccid,
+                imsi,
+                qr_code,
+                activation_code,
+                phone_number,
+                id_sim_type,
+                id_package,
+                id_sim_status,
+                imported_by,
+                id_file,
+                imported_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            [
+                cleanIccid,
+                cleanImsi,
+                qr_code || null,
+                activation_code || null,
+                phone_number || null,
+                id_sim_type || null,
+                Number(id_package),
+                id_sim_status || 1,
+                req.user?.id_user || null,
+                id_file || null,
+                imported_at || null
+            ]
+        );
+
+        const [rows] = await connection.query(
+            `
+            ${SIM_SELECT}
+            WHERE s.id_sim = ?
+            LIMIT 1
+            `,
+            [result.insertId]
+        );
+
+        await createAuditLog({
+            req,
+            action: "CREATE",
+            targetEntity: "sim_cards",
+            targetId: result.insertId,
+            metadata: {
+                iccid: cleanIccid,
+                imsi: cleanImsi,
+                id_package: Number(id_package)
+            }
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: "SIM card created successfully",
+            data: rows[0]
+        });
+
+    } catch (error) {
+        console.error("CREATE SIM ERROR:", error);
+
+        if (error.code === "ER_DUP_ENTRY") {
             return res.status(409).json({
                 success: false,
-                message:
-                    "ICCID or IMSI already exists"
+                message: "ICCID or IMSI already exists"
             });
         }
 
-        res.status(400).json({
+        return res.status(400).json({
             success: false,
             message: error.message
         });
+
+    } finally {
+        if (connection) {
+            connection.release();
+        }
     }
 };
 
@@ -388,9 +389,9 @@ const createSim = async (req, res) => {
 // =====================================================
 
 const updateSim = async (req, res) => {
+    let connection;
 
     try {
-
         const { id } = req.params;
 
         const {
@@ -406,16 +407,17 @@ const updateSim = async (req, res) => {
             imported_at
         } = req.body;
 
-        if (!String(iccid || "").trim()) {
+        const cleanIccid = String(iccid || "").trim();
+        const cleanImsi = String(imsi || "").trim();
 
+        if (!cleanIccid) {
             return res.status(400).json({
                 success: false,
                 message: "ICCID is required"
             });
         }
 
-        if (!String(imsi || "").trim()) {
-
+        if (!cleanImsi) {
             return res.status(400).json({
                 success: false,
                 message: "IMSI is required"
@@ -423,84 +425,79 @@ const updateSim = async (req, res) => {
         }
 
         if (!id_package) {
-
             return res.status(400).json({
                 success: false,
                 message: "Package is required for SIM"
             });
         }
 
-        const connection =
-            await pool.getConnection();
+        connection = await pool.getConnection();
 
-        try {
+        const [oldRows] = await connection.query(
+            `
+            SELECT *
+            FROM sim_cards
+            WHERE id_sim = ?
+              AND deleted_at IS NULL
+            FOR UPDATE
+            `,
+            [id]
+        );
 
-            const [oldRows] =
-                await connection.query(`
-                    SELECT *
-                    FROM sim_cards
-                    WHERE id_sim = ?
-                      AND deleted_at IS NULL
-                    FOR UPDATE
-                `, [id]);
+        if (!oldRows.length) {
+            return res.status(404).json({
+                success: false,
+                message: "SIM card not found"
+            });
+        }
 
-            if (!oldRows.length) {
+        await validatePackage(
+            connection,
+            Number(id_package),
+            id_sim_type
+        );
 
-                connection.release();
-
-                return res.status(404).json({
-                    success: false,
-                    message: "SIM card not found"
-                });
-            }
-
-            await validatePackage(
-                connection,
-                Number(id_package),
-                id_sim_type
+        if (id_file) {
+            const [fileRows] = await connection.query(
+                `
+                SELECT id_file
+                FROM history_sim_card_file
+                WHERE id_file = ?
+                LIMIT 1
+                `,
+                [id_file]
             );
 
-            if (id_file) {
-
-                const [fileRows] =
-                    await connection.query(`
-                        SELECT id_file
-                        FROM history_sim_card_file
-                        WHERE id_file = ?
-                        LIMIT 1
-                    `, [id_file]);
-
-                if (!fileRows.length) {
-
-                    connection.release();
-
-                    return res.status(404).json({
-                        success: false,
-                        message: "File history not found"
-                    });
-                }
+            if (!fileRows.length) {
+                return res.status(404).json({
+                    success: false,
+                    message: "File history not found"
+                });
             }
+        }
 
-            await connection.query(`
-                UPDATE sim_cards
-                SET
-                    iccid = ?,
-                    imsi = ?,
-                    qr_code = ?,
-                    activation_code = ?,
-                    phone_number = ?,
-                    id_sim_type = ?,
-                    id_package = ?,
-                    id_sim_status = ?,
-                    imported_by = COALESCE(?, imported_by),
-                    id_file = ?,
-                    imported_at = ?,
-                    updated_at = NOW()
-                WHERE id_sim = ?
-                  AND deleted_at IS NULL
-            `, [
-                String(iccid).trim(),
-                String(imsi).trim(),
+        await connection.query(
+            `
+            UPDATE sim_cards
+            SET
+                iccid = ?,
+                imsi = ?,
+                qr_code = ?,
+                activation_code = ?,
+                phone_number = ?,
+                id_sim_type = ?,
+                id_package = ?,
+                id_sim_status = ?,
+                imported_by = COALESCE(?, imported_by),
+                id_file = ?,
+                imported_at = ?,
+                updated_at = NOW()
+            WHERE id_sim = ?
+              AND deleted_at IS NULL
+            `,
+            [
+                cleanIccid,
+                cleanImsi,
                 qr_code || null,
                 activation_code || null,
                 phone_number || null,
@@ -511,71 +508,62 @@ const updateSim = async (req, res) => {
                 id_file || null,
                 imported_at || null,
                 id
-            ]);
-
-            const [rows] =
-                await connection.query(`
-                    ${SIM_SELECT}
-                    WHERE s.id_sim = ?
-                    LIMIT 1
-                `, [id]);
-
-            connection.release();
-
-            await createAuditLog({
-                req,
-                action: "UPDATE",
-                targetEntity: "sim_cards",
-                targetId: id,
-                metadata: {
-                    old: {
-                        iccid: oldRows[0].iccid,
-                        imsi: oldRows[0].imsi,
-                        id_package: oldRows[0].id_package
-                    },
-                    new: {
-                        iccid: String(iccid).trim(),
-                        imsi: String(imsi).trim(),
-                        id_package: Number(id_package)
-                    }
-                }
-            }).catch(console.error);
-
-            return res.json({
-                success: true,
-                message: "SIM card updated successfully",
-                data: rows[0]
-            });
-
-        } catch (error) {
-
-            try {
-                connection.release();
-            } catch {}
-
-            throw error;
-        }
-
-    } catch (error) {
-
-        console.error(
-            "UPDATE SIM ERROR:",
-            error
+            ]
         );
 
-        if (error.code === "ER_DUP_ENTRY") {
+        const [rows] = await connection.query(
+            `
+            ${SIM_SELECT}
+            WHERE s.id_sim = ?
+            LIMIT 1
+            `,
+            [id]
+        );
 
+        await createAuditLog({
+            req,
+            action: "UPDATE",
+            targetEntity: "sim_cards",
+            targetId: id,
+            metadata: {
+                old: {
+                    iccid: oldRows[0].iccid,
+                    imsi: oldRows[0].imsi,
+                    id_package: oldRows[0].id_package
+                },
+                new: {
+                    iccid: cleanIccid,
+                    imsi: cleanImsi,
+                    id_package: Number(id_package)
+                }
+            }
+        });
+
+        return res.json({
+            success: true,
+            message: "SIM card updated successfully",
+            data: rows[0]
+        });
+
+    } catch (error) {
+        console.error("UPDATE SIM ERROR:", error);
+
+        if (error.code === "ER_DUP_ENTRY") {
             return res.status(409).json({
                 success: false,
-                message:
-                    "ICCID or IMSI already exists"
+                message: "ICCID or IMSI already exists"
             });
         }
 
-        res.status(400).json({
+        return res.status(400).json({
             success: false,
             message: error.message
         });
+
+    } finally {
+        if (connection) {
+            connection.release();
+        }
     }
 };
 
@@ -585,59 +573,38 @@ const updateSim = async (req, res) => {
 // =====================================================
 
 const deleteSim = async (req, res) => {
-
     try {
-
         const { id } = req.params;
 
-        const [rows] =
-            await pool.query(`
-                SELECT
-                    s.id_sim,
-                    ss.sim_status,
-                    COUNT(r.id_registration) AS registration_count
-
-                FROM sim_cards s
-
-                LEFT JOIN sim_status ss
-                    ON s.id_sim_status =
-                       ss.id_sim_status
-
-                LEFT JOIN registrations r
-                    ON r.id_sim = s.id_sim
-                   AND r.deleted_at IS NULL
-
-                WHERE s.id_sim = ?
-                  AND s.deleted_at IS NULL
-
-                GROUP BY
-                    s.id_sim,
-                    ss.sim_status
-            `, [id]);
+        const [rows] = await pool.query(
+            `
+            SELECT
+                s.id_sim,
+                ss.sim_status,
+                COUNT(r.id_registration) AS registration_count
+            FROM sim_cards s
+            LEFT JOIN sim_status ss
+                ON s.id_sim_status = ss.id_sim_status
+            LEFT JOIN registrations r
+                ON r.id_sim = s.id_sim
+               AND r.deleted_at IS NULL
+            WHERE s.id_sim = ?
+              AND s.deleted_at IS NULL
+            GROUP BY
+                s.id_sim,
+                ss.sim_status
+            `,
+            [id]
+        );
 
         if (!rows.length) {
-
             return res.status(404).json({
                 success: false,
                 message: "SIM card not found"
             });
         }
 
-        const status =
-            String(rows[0].sim_status || "")
-                .trim()
-                .toLowerCase();
-
-        const isAvailable =
-            [
-                "available",
-                "ready for sale",
-                "ວ່າງ",
-                "ພ້ອມຂາຍ"
-            ].includes(status);
-
-        if (!isAvailable) {
-
+        if (!isAvailableStatus(rows[0].sim_status)) {
             return res.status(409).json({
                 success: false,
                 message:
@@ -646,7 +613,6 @@ const deleteSim = async (req, res) => {
         }
 
         if (Number(rows[0].registration_count) > 0) {
-
             return res.status(409).json({
                 success: false,
                 message:
@@ -654,33 +620,32 @@ const deleteSim = async (req, res) => {
             });
         }
 
-        await pool.query(`
+        await pool.query(
+            `
             UPDATE sim_cards
             SET deleted_at = NOW()
             WHERE id_sim = ?
               AND deleted_at IS NULL
-        `, [id]);
+            `,
+            [id]
+        );
 
         await createAuditLog({
             req,
             action: "DELETE",
             targetEntity: "sim_cards",
             targetId: id
-        }).catch(console.error);
+        });
 
-        res.json({
+        return res.json({
             success: true,
             message: "SIM card deleted successfully"
         });
 
     } catch (error) {
+        console.error("DELETE SIM ERROR:", error);
 
-        console.error(
-            "DELETE SIM ERROR:",
-            error
-        );
-
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Database error"
         });
@@ -693,87 +658,86 @@ const deleteSim = async (req, res) => {
 // =====================================================
 
 const getAvailableSims = async (req, res) => {
-
     try {
-
         const id_sim_type =
             req.query.id_sim_type ||
             req.query.sim_type_id;
 
         if (!id_sim_type) {
-
             return res.status(400).json({
                 success: false,
                 message: "SIM type is required"
             });
         }
 
-        const [rows] =
-            await pool.query(`
-                SELECT
-                    s.id_sim,
-                    s.iccid,
-                    s.imsi,
-                    s.phone_number,
+        const [rows] = await pool.query(
+            `
+            SELECT
+                s.id_sim,
+                s.iccid,
+                s.imsi,
+                s.phone_number,
 
-                    s.id_sim_type,
-                    st.sim_type,
+                s.id_sim_type,
+                st.sim_type,
 
-                    s.id_package,
-                    p.package_name,
-                    p.data_gb AS package_data_gb,
-                    p.validity_days AS package_duration_days,
-                    p.price AS package_price,
+                s.id_package,
+                p.package_name,
+                p.data_gb AS package_data_gb,
+                p.validity_days AS package_duration_days,
+                p.price AS package_price,
 
-                    s.id_sim_status,
-                    ss.sim_status
+                s.id_sim_status,
+                ss.sim_status
 
-                FROM sim_cards s
+            FROM sim_cards s
 
-                INNER JOIN sim_status ss
-                    ON s.id_sim_status =
-                       ss.id_sim_status
+            INNER JOIN sim_status ss
+                ON s.id_sim_status = ss.id_sim_status
 
-                LEFT JOIN sim_types st
-                    ON s.id_sim_type =
-                       st.id_sim_type
+            LEFT JOIN sim_types st
+                ON s.id_sim_type = st.id_sim_type
 
-                LEFT JOIN packages p
-                    ON s.id_package =
-                       p.id_package
+            LEFT JOIN packages p
+                ON s.id_package = p.id_package
 
-                WHERE s.id_sim_type = ?
-                  AND LOWER(ss.sim_status) IN (
-                      'available',
-                      'ready for sale',
-                      'ວ່າງ',
-                      'ພ້ອມຂາຍ'
-                  )
-                  AND s.deleted_at IS NULL
-                  AND s.id_package IS NOT NULL
+            WHERE s.id_sim_type = ?
+              AND s.deleted_at IS NULL
+              AND s.id_package IS NOT NULL
 
-                ORDER BY s.id_sim ASC
-            `, [id_sim_type]);
+              AND LOWER(ss.sim_status) IN (
+                  'available',
+                  'ready for sale',
+                  'ready_to_sale',
+                  'ready-to-sale',
+                  'ວ່າງ',
+                  'ພ້ອມຂາຍ'
+              )
 
-        res.json({
+            ORDER BY s.id_sim ASC
+            `,
+            [id_sim_type]
+        );
+
+        return res.json({
             success: true,
             data: rows
         });
 
     } catch (error) {
+        console.error("GET AVAILABLE SIMS ERROR:", error);
 
-        console.error(
-            "GET AVAILABLE SIMS ERROR:",
-            error
-        );
-
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Database error"
         });
     }
 };
 
+
+// =====================================================
+// EXPORT
+// =====================================================
 
 module.exports = {
     getAvailableSims,

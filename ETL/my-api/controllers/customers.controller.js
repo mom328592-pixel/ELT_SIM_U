@@ -7,9 +7,7 @@ const { createAuditLog } = require("../utils/audit");
 // =====================================================
 
 const getAllCustomers = async (req, res) => {
-
     try {
-
         const [rows] = await pool.query(`
             SELECT
                 id_customer,
@@ -27,19 +25,15 @@ const getAllCustomers = async (req, res) => {
             ORDER BY id_customer ASC
         `);
 
-        res.json({
+        return res.json({
             success: true,
             data: rows
         });
 
     } catch (error) {
+        console.error("GET CUSTOMERS ERROR:", error);
 
-        console.error(
-            "GET CUSTOMERS ERROR:",
-            error
-        );
-
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Database error"
         });
@@ -52,12 +46,11 @@ const getAllCustomers = async (req, res) => {
 // =====================================================
 
 const getCustomerById = async (req, res) => {
-
     try {
-
         const { id } = req.params;
 
-        const [rows] = await pool.query(`
+        const [rows] = await pool.query(
+            `
             SELECT
                 id_customer,
                 first_name,
@@ -73,29 +66,26 @@ const getCustomerById = async (req, res) => {
             FROM customers
             WHERE id_customer = ?
             LIMIT 1
-        `, [id]);
+            `,
+            [id]
+        );
 
         if (!rows.length) {
-
             return res.status(404).json({
                 success: false,
                 message: "Customer not found"
             });
         }
 
-        res.json({
+        return res.json({
             success: true,
             data: rows[0]
         });
 
     } catch (error) {
+        console.error("GET CUSTOMER BY ID ERROR:", error);
 
-        console.error(
-            "GET CUSTOMER BY ID ERROR:",
-            error
-        );
-
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Database error"
         });
@@ -108,9 +98,7 @@ const getCustomerById = async (req, res) => {
 // =====================================================
 
 const createCustomer = async (req, res) => {
-
     try {
-
         const {
             first_name,
             last_name,
@@ -123,7 +111,6 @@ const createCustomer = async (req, res) => {
         } = req.body;
 
         if (!first_name?.trim()) {
-
             return res.status(400).json({
                 success: false,
                 message: "First name is required"
@@ -131,7 +118,6 @@ const createCustomer = async (req, res) => {
         }
 
         if (!last_name?.trim()) {
-
             return res.status(400).json({
                 success: false,
                 message: "Last name is required"
@@ -139,55 +125,61 @@ const createCustomer = async (req, res) => {
         }
 
         if (!passport_number?.trim()) {
-
             return res.status(400).json({
                 success: false,
                 message: "Passport number is required"
             });
         }
 
-        const [result] =
-            await pool.query(`
-                INSERT INTO customers (
-                    first_name,
-                    last_name,
-                    passport_number,
-                    nationality,
-                    date_of_birth,
-                    passport_expiry_date,
-                    phone_number,
-                    passport_photo
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
+        const cleanPassport =
+            passport_number.trim();
+
+        const [result] = await pool.query(
+            `
+            INSERT INTO customers (
+                first_name,
+                last_name,
+                passport_number,
+                nationality,
+                date_of_birth,
+                passport_expiry_date,
+                phone_number,
+                passport_photo
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            [
                 first_name.trim(),
                 last_name.trim(),
-                passport_number.trim(),
+                cleanPassport,
                 nationality?.trim() || null,
                 date_of_birth || null,
                 passport_expiry_date || null,
                 phone_number?.trim() || null,
                 passport_photo || null
-            ]);
+            ]
+        );
 
-        const [rows] =
-            await pool.query(`
-                SELECT
-                    id_customer,
-                    first_name,
-                    last_name,
-                    passport_number,
-                    nationality,
-                    date_of_birth,
-                    passport_expiry_date,
-                    phone_number,
-                    passport_photo,
-                    created_at,
-                    updated_at
-                FROM customers
-                WHERE id_customer = ?
-                LIMIT 1
-            `, [result.insertId]);
+        const [rows] = await pool.query(
+            `
+            SELECT
+                id_customer,
+                first_name,
+                last_name,
+                passport_number,
+                nationality,
+                date_of_birth,
+                passport_expiry_date,
+                phone_number,
+                passport_photo,
+                created_at,
+                updated_at
+            FROM customers
+            WHERE id_customer = ?
+            LIMIT 1
+            `,
+            [result.insertId]
+        );
 
         await createAuditLog({
             req,
@@ -195,33 +187,27 @@ const createCustomer = async (req, res) => {
             targetEntity: "customers",
             targetId: result.insertId,
             metadata: {
-                passport_number: passport_number.trim()
+                passport_number: cleanPassport
             }
-        }).catch(console.error);
+        });
 
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
             message: "Customer created successfully",
             data: rows[0]
         });
 
     } catch (error) {
-
-        console.error(
-            "CREATE CUSTOMER ERROR:",
-            error
-        );
+        console.error("CREATE CUSTOMER ERROR:", error);
 
         if (error.code === "ER_DUP_ENTRY") {
-
             return res.status(409).json({
                 success: false,
-                message:
-                    "Passport number already exists"
+                message: "Passport number already exists"
             });
         }
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Database error"
         });
@@ -234,9 +220,7 @@ const createCustomer = async (req, res) => {
 // =====================================================
 
 const updateCustomer = async (req, res) => {
-
     try {
-
         const { id } = req.params;
 
         const {
@@ -251,7 +235,6 @@ const updateCustomer = async (req, res) => {
         } = req.body;
 
         if (!first_name?.trim()) {
-
             return res.status(400).json({
                 success: false,
                 message: "First name is required"
@@ -259,30 +242,40 @@ const updateCustomer = async (req, res) => {
         }
 
         if (!last_name?.trim()) {
-
             return res.status(400).json({
                 success: false,
                 message: "Last name is required"
             });
         }
 
-        const [oldRows] =
-            await pool.query(`
-                SELECT *
-                FROM customers
-                WHERE id_customer = ?
-                LIMIT 1
-            `, [id]);
+        const [oldRows] = await pool.query(
+            `
+            SELECT
+                id_customer,
+                first_name,
+                last_name,
+                passport_number,
+                nationality,
+                date_of_birth,
+                passport_expiry_date,
+                phone_number,
+                passport_photo
+            FROM customers
+            WHERE id_customer = ?
+            LIMIT 1
+            `,
+            [id]
+        );
 
         if (!oldRows.length) {
-
             return res.status(404).json({
                 success: false,
                 message: "Customer not found"
             });
         }
 
-        await pool.query(`
+        await pool.query(
+            `
             UPDATE customers
             SET
                 first_name = ?,
@@ -295,36 +288,40 @@ const updateCustomer = async (req, res) => {
                 passport_photo = COALESCE(?, passport_photo),
                 updated_at = NOW()
             WHERE id_customer = ?
-        `, [
-            first_name.trim(),
-            last_name.trim(),
-            passport_number?.trim() || null,
-            nationality?.trim() || null,
-            date_of_birth || null,
-            passport_expiry_date || null,
-            phone_number?.trim() || null,
-            passport_photo || null,
-            id
-        ]);
+            `,
+            [
+                first_name.trim(),
+                last_name.trim(),
+                passport_number?.trim() || null,
+                nationality?.trim() || null,
+                date_of_birth || null,
+                passport_expiry_date || null,
+                phone_number?.trim() || null,
+                passport_photo || null,
+                id
+            ]
+        );
 
-        const [rows] =
-            await pool.query(`
-                SELECT
-                    id_customer,
-                    first_name,
-                    last_name,
-                    passport_number,
-                    nationality,
-                    date_of_birth,
-                    passport_expiry_date,
-                    phone_number,
-                    passport_photo,
-                    created_at,
-                    updated_at
-                FROM customers
-                WHERE id_customer = ?
-                LIMIT 1
-            `, [id]);
+        const [rows] = await pool.query(
+            `
+            SELECT
+                id_customer,
+                first_name,
+                last_name,
+                passport_number,
+                nationality,
+                date_of_birth,
+                passport_expiry_date,
+                phone_number,
+                passport_photo,
+                created_at,
+                updated_at
+            FROM customers
+            WHERE id_customer = ?
+            LIMIT 1
+            `,
+            [id]
+        );
 
         await createAuditLog({
             req,
@@ -332,34 +329,34 @@ const updateCustomer = async (req, res) => {
             targetEntity: "customers",
             targetId: id,
             metadata: {
-                old: oldRows[0],
-                new: rows[0]
+                old: {
+                    passport_number:
+                        oldRows[0].passport_number
+                },
+                new: {
+                    passport_number:
+                        rows[0].passport_number
+                }
             }
-        }).catch(console.error);
+        });
 
-        res.json({
+        return res.json({
             success: true,
             message: "Customer updated successfully",
             data: rows[0]
         });
 
     } catch (error) {
-
-        console.error(
-            "UPDATE CUSTOMER ERROR:",
-            error
-        );
+        console.error("UPDATE CUSTOMER ERROR:", error);
 
         if (error.code === "ER_DUP_ENTRY") {
-
             return res.status(409).json({
                 success: false,
-                message:
-                    "Passport number already exists"
+                message: "Passport number already exists"
             });
         }
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Database error"
         });
@@ -372,22 +369,22 @@ const updateCustomer = async (req, res) => {
 // =====================================================
 
 const deleteCustomer = async (req, res) => {
-
     try {
-
         const { id } = req.params;
 
-        const [registrationRows] =
-            await pool.query(`
-                SELECT id_registration
-                FROM registrations
-                WHERE id_customer = ?
-                  AND deleted_at IS NULL
-                LIMIT 1
-            `, [id]);
+        const [registrationRows] = await pool.query(
+            `
+            SELECT
+                id_registration
+            FROM registrations
+            WHERE id_customer = ?
+              AND deleted_at IS NULL
+            LIMIT 1
+            `,
+            [id]
+        );
 
         if (registrationRows.length) {
-
             return res.status(409).json({
                 success: false,
                 message:
@@ -395,14 +392,15 @@ const deleteCustomer = async (req, res) => {
             });
         }
 
-        const [result] =
-            await pool.query(`
-                DELETE FROM customers
-                WHERE id_customer = ?
-            `, [id]);
+        const [result] = await pool.query(
+            `
+            DELETE FROM customers
+            WHERE id_customer = ?
+            `,
+            [id]
+        );
 
         if (!result.affectedRows) {
-
             return res.status(404).json({
                 success: false,
                 message: "Customer not found"
@@ -414,21 +412,17 @@ const deleteCustomer = async (req, res) => {
             action: "DELETE",
             targetEntity: "customers",
             targetId: id
-        }).catch(console.error);
+        });
 
-        res.json({
+        return res.json({
             success: true,
             message: "Customer deleted successfully"
         });
 
     } catch (error) {
+        console.error("DELETE CUSTOMER ERROR:", error);
 
-        console.error(
-            "DELETE CUSTOMER ERROR:",
-            error
-        );
-
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Database error"
         });

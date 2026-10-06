@@ -1,16 +1,48 @@
 const express = require("express");
+
 const router = express.Router();
 
 const {
     getAllSimTypes,
     createSimType,
     updateSimType,
-    deleteSimType
+    deleteSimType,
 } = require("../controllers/sim-types.controller");
 
-router.get("/", getAllSimTypes);
-router.post("/", createSimType);
-router.put("/:id", updateSimType);
-router.delete("/:id", deleteSimType);
+// =====================================================
+// GET ALL SIM TYPES
+// =====================================================
+
+router.get(
+    "/",
+    getAllSimTypes
+);
+
+// =====================================================
+// CREATE SIM TYPE
+// =====================================================
+
+router.post(
+    "/",
+    createSimType
+);
+
+// =====================================================
+// UPDATE SIM TYPE
+// =====================================================
+
+router.put(
+    "/:id",
+    updateSimType
+);
+
+// =====================================================
+// DELETE SIM TYPE
+// =====================================================
+
+router.delete(
+    "/:id",
+    deleteSimType
+);
 
 module.exports = router;

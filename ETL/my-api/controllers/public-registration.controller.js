@@ -1,4 +1,5 @@
 const pool = require("../db");
+const { createAuditLog } = require("../utils/audit");
 
 
 // =====================================================
@@ -6,26 +7,25 @@ const pool = require("../db");
 // =====================================================
 
 const getRegistrationOptions = async (req, res) => {
-
     try {
-
         const { agentToken } = req.params;
 
-        const [agents] =
-            await pool.query(`
-                SELECT
-                    id_agent,
-                    agent_name,
-                    contact_phone,
-                    contact_email
-                FROM agents
-                WHERE public_token = ?
-                  AND deleted_at IS NULL
-                LIMIT 1
-            `, [agentToken]);
+        const [agents] = await pool.query(
+            `
+            SELECT
+                id_agent,
+                agent_name,
+                contact_phone,
+                contact_email
+            FROM agents
+            WHERE public_token = ?
+              AND deleted_at IS NULL
+            LIMIT 1
+            `,
+            [agentToken]
+        );
 
         if (!agents.length) {
-
             return res.status(404).json({
                 success: false,
                 message:
@@ -33,17 +33,18 @@ const getRegistrationOptions = async (req, res) => {
             });
         }
 
-        const [simTypes] =
-            await pool.query(`
-                SELECT
-                    id_sim_type,
-                    sim_type,
-                    description
-                FROM sim_types
-                ORDER BY id_sim_type ASC
-            `);
+        const [simTypes] = await pool.query(
+            `
+            SELECT
+                id_sim_type,
+                sim_type,
+                description
+            FROM sim_types
+            ORDER BY id_sim_type ASC
+            `
+        );
 
-        res.json({
+        return res.json({
             success: true,
             data: {
                 agent: agents[0],
@@ -52,13 +53,12 @@ const getRegistrationOptions = async (req, res) => {
         });
 
     } catch (error) {
-
         console.error(
             "GET REGISTRATION OPTIONS ERROR:",
             error
         );
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Database error"
         });
@@ -71,12 +71,9 @@ const getRegistrationOptions = async (req, res) => {
 // =====================================================
 
 const createPublicRegistration = async (req, res) => {
-
-    const connection =
-        await pool.getConnection();
+    let connection;
 
     try {
-
         const {
             agent_token,
             id_sim_type,
@@ -89,10 +86,11 @@ const createPublicRegistration = async (req, res) => {
             phone_number
         } = req.body;
 
+        // ---------------------------------------------
+        // BASIC VALIDATION
+        // ---------------------------------------------
+
         if (!agent_token) {
-
-            connection.release();
-
             return res.status(400).json({
                 success: false,
                 message: "Agent token is required"
@@ -100,9 +98,6 @@ const createPublicRegistration = async (req, res) => {
         }
 
         if (!id_sim_type) {
-
-            connection.release();
-
             return res.status(400).json({
                 success: false,
                 message: "SIM type is required"
@@ -110,9 +105,6 @@ const createPublicRegistration = async (req, res) => {
         }
 
         if (!first_name?.trim()) {
-
-            connection.release();
-
             return res.status(400).json({
                 success: false,
                 message: "First name is required"
@@ -120,9 +112,6 @@ const createPublicRegistration = async (req, res) => {
         }
 
         if (!last_name?.trim()) {
-
-            connection.release();
-
             return res.status(400).json({
                 success: false,
                 message: "Last name is required"
@@ -130,35 +119,31 @@ const createPublicRegistration = async (req, res) => {
         }
 
         if (!passport_number?.trim()) {
-
-            connection.release();
-
             return res.status(400).json({
                 success: false,
-                message:
-                    "Passport number is required"
+                message: "Passport number is required"
             });
         }
 
         if (!nationality?.trim()) {
-
-            connection.release();
-
             return res.status(400).json({
                 success: false,
                 message: "Nationality is required"
             });
         }
 
+        connection =
+            await pool.getConnection();
+
         await connection.beginTransaction();
 
-
-        // =================================================
-        // AGENT
-        // =================================================
+        // ---------------------------------------------
+        // FIND AGENT
+        // ---------------------------------------------
 
         const [agentRows] =
-            await connection.query(`
+            await connection.query(
+                `
                 SELECT
                     id_agent,
                     agent_name
@@ -166,12 +151,12 @@ const createPublicRegistration = async (req, res) => {
                 WHERE public_token = ?
                   AND deleted_at IS NULL
                 LIMIT 1
-            `, [agent_token]);
+                `,
+                [agent_token]
+            );
 
         if (!agentRows.length) {
-
             await connection.rollback();
-            connection.release();
 
             return res.status(404).json({
                 success: false,
@@ -180,27 +165,28 @@ const createPublicRegistration = async (req, res) => {
             });
         }
 
-        const agent = agentRows[0];
+        const agent =
+            agentRows[0];
 
-
-        // =================================================
-        // SIM TYPE
-        // =================================================
+        // ---------------------------------------------
+        // FIND SIM TYPE
+        // ---------------------------------------------
 
         const [simTypeRows] =
-            await connection.query(`
+            await connection.query(
+                `
                 SELECT
                     id_sim_type,
                     sim_type
                 FROM sim_types
                 WHERE id_sim_type = ?
                 LIMIT 1
-            `, [id_sim_type]);
+                `,
+                [id_sim_type]
+            );
 
         if (!simTypeRows.length) {
-
             await connection.rollback();
-            connection.release();
 
             return res.status(404).json({
                 success: false,
@@ -208,14 +194,13 @@ const createPublicRegistration = async (req, res) => {
             });
         }
 
-
-        // =================================================
-        // AVAILABLE SIM + PACKAGE
-        // IMPORTANT: LOCK ROW
-        // =================================================
+        // ---------------------------------------------
+        // FIND + LOCK AVAILABLE SIM
+        // ---------------------------------------------
 
         const [simRows] =
-            await connection.query(`
+            await connection.query(
+                `
                 SELECT
                     s.id_sim,
                     s.phone_number,
@@ -256,6 +241,8 @@ const createPublicRegistration = async (req, res) => {
                   AND LOWER(ss.sim_status) IN (
                       'available',
                       'ready for sale',
+                      'ready_to_sale',
+                      'ready-to-sale',
                       'ວ່າງ',
                       'ພ້ອມຂາຍ'
                   )
@@ -265,12 +252,12 @@ const createPublicRegistration = async (req, res) => {
                 LIMIT 1
 
                 FOR UPDATE
-            `, [id_sim_type]);
+                `,
+                [id_sim_type]
+            );
 
         if (!simRows.length) {
-
             await connection.rollback();
-            connection.release();
 
             return res.status(409).json({
                 success: false,
@@ -279,15 +266,16 @@ const createPublicRegistration = async (req, res) => {
             });
         }
 
-        const sim = simRows[0];
+        const sim =
+            simRows[0];
 
-
-        // =================================================
-        // CHECK CUSTOMER DUPLICATE PENDING REGISTRATION
-        // =================================================
+        // ---------------------------------------------
+        // PREVENT DUPLICATE CUSTOMER PENDING REQUEST
+        // ---------------------------------------------
 
         const [pendingCustomerRows] =
-            await connection.query(`
+            await connection.query(
+                `
                 SELECT
                     r.id_registration
 
@@ -309,12 +297,12 @@ const createPublicRegistration = async (req, res) => {
                   AND r.deleted_at IS NULL
 
                 LIMIT 1
-            `, [passport_number.trim()]);
+                `,
+                [passport_number.trim()]
+            );
 
         if (pendingCustomerRows.length) {
-
             await connection.rollback();
-            connection.release();
 
             return res.status(409).json({
                 success: false,
@@ -323,13 +311,13 @@ const createPublicRegistration = async (req, res) => {
             });
         }
 
-
-        // =================================================
-        // CHECK SIM PENDING REGISTRATION
-        // =================================================
+        // ---------------------------------------------
+        // PREVENT DUPLICATE SIM PENDING REQUEST
+        // ---------------------------------------------
 
         const [pendingSimRows] =
-            await connection.query(`
+            await connection.query(
+                `
                 SELECT
                     r.id_registration
 
@@ -347,12 +335,12 @@ const createPublicRegistration = async (req, res) => {
                   AND r.deleted_at IS NULL
 
                 LIMIT 1
-            `, [sim.id_sim]);
+                `,
+                [sim.id_sim]
+            );
 
         if (pendingSimRows.length) {
-
             await connection.rollback();
-            connection.release();
 
             return res.status(409).json({
                 success: false,
@@ -361,10 +349,9 @@ const createPublicRegistration = async (req, res) => {
             });
         }
 
-
-        // =================================================
+        // ---------------------------------------------
         // PASSPORT PHOTO
-        // =================================================
+        // ---------------------------------------------
 
         let passportPhoto = null;
 
@@ -373,29 +360,35 @@ const createPublicRegistration = async (req, res) => {
                 `/uploads/${req.file.filename}`;
         }
 
-
-        // =================================================
-        // CUSTOMER
-        // =================================================
+        // ---------------------------------------------
+        // FIND EXISTING CUSTOMER
+        // ---------------------------------------------
 
         let customerId;
 
         const [customerRows] =
-            await connection.query(`
+            await connection.query(
+                `
                 SELECT
                     id_customer
                 FROM customers
                 WHERE passport_number = ?
                 LIMIT 1
-            `, [passport_number.trim()]);
-
+                `,
+                [passport_number.trim()]
+            );
 
         if (customerRows.length) {
+
+            // -----------------------------------------
+            // UPDATE EXISTING CUSTOMER
+            // -----------------------------------------
 
             customerId =
                 customerRows[0].id_customer;
 
-            await connection.query(`
+            await connection.query(
+                `
                 UPDATE customers
                 SET
                     first_name = ?,
@@ -411,21 +404,28 @@ const createPublicRegistration = async (req, res) => {
                         ),
                     updated_at = NOW()
                 WHERE id_customer = ?
-            `, [
-                first_name.trim(),
-                last_name.trim(),
-                nationality.trim(),
-                date_of_birth || null,
-                passport_expiry_date || null,
-                phone_number?.trim() || null,
-                passportPhoto,
-                customerId
-            ]);
+                `,
+                [
+                    first_name.trim(),
+                    last_name.trim(),
+                    nationality.trim(),
+                    date_of_birth || null,
+                    passport_expiry_date || null,
+                    phone_number?.trim() || null,
+                    passportPhoto,
+                    customerId
+                ]
+            );
 
         } else {
 
+            // -----------------------------------------
+            // CREATE NEW CUSTOMER
+            // -----------------------------------------
+
             const [customerResult] =
-                await connection.query(`
+                await connection.query(
+                    `
                     INSERT INTO customers (
                         first_name,
                         last_name,
@@ -437,40 +437,41 @@ const createPublicRegistration = async (req, res) => {
                         passport_photo
                     )
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                `, [
-                    first_name.trim(),
-                    last_name.trim(),
-                    passport_number.trim(),
-                    nationality.trim(),
-                    date_of_birth || null,
-                    passport_expiry_date || null,
-                    phone_number?.trim() || null,
-                    passportPhoto
-                ]);
+                    `,
+                    [
+                        first_name.trim(),
+                        last_name.trim(),
+                        passport_number.trim(),
+                        nationality.trim(),
+                        date_of_birth || null,
+                        passport_expiry_date || null,
+                        phone_number?.trim() || null,
+                        passportPhoto
+                    ]
+                );
 
             customerId =
                 customerResult.insertId;
         }
 
-
-        // =================================================
-        // PENDING STATUS
-        // =================================================
+        // ---------------------------------------------
+        // GET PENDING REGISTRATION STATUS
+        // ---------------------------------------------
 
         const [statusRows] =
-            await connection.query(`
+            await connection.query(
+                `
                 SELECT
                     id_registration_status
                 FROM registrations_status
                 WHERE LOWER(status_name) =
                       'pending'
                 LIMIT 1
-            `);
+                `
+            );
 
         if (!statusRows.length) {
-
             await connection.rollback();
-            connection.release();
 
             return res.status(500).json({
                 success: false,
@@ -482,15 +483,14 @@ const createPublicRegistration = async (req, res) => {
         const pendingStatus =
             statusRows[0].id_registration_status;
 
-
-        // =================================================
+        // ---------------------------------------------
         // CREATE REGISTRATION
-        // PACKAGE IS NOT STORED HERE
-        // PACKAGE COMES FROM sim_cards.id_package
-        // =================================================
+        // PACKAGE IS TAKEN FROM SIM
+        // ---------------------------------------------
 
         const [registrationResult] =
-            await connection.query(`
+            await connection.query(
+                `
                 INSERT INTO registrations (
                     id_registration_status,
                     id_customer,
@@ -500,37 +500,51 @@ const createPublicRegistration = async (req, res) => {
                     notes
                 )
                 VALUES (?, ?, ?, ?, NOW(), ?)
-            `, [
-                pendingStatus,
-                customerId,
-                sim.id_sim,
-                agent.id_agent,
-                "Customer self registration"
-            ]);
+                `,
+                [
+                    pendingStatus,
+                    customerId,
+                    sim.id_sim,
+                    agent.id_agent,
+                    "Customer self registration"
+                ]
+            );
 
-
-        // =================================================
+        // ---------------------------------------------
         // COMMIT
-        // =================================================
+        // ---------------------------------------------
 
         await connection.commit();
 
-        connection.release();
+        // ---------------------------------------------
+        // AUDIT
+        // ---------------------------------------------
 
+        await createAuditLog({
+            req,
+            action: "CREATE_PUBLIC_REGISTRATION",
+            targetEntity: "registrations",
+            targetId: registrationResult.insertId,
+            metadata: {
+                id_agent: agent.id_agent,
+                id_customer: customerId,
+                id_sim: sim.id_sim,
+                id_sim_type: id_sim_type,
+                passport_number:
+                    passport_number.trim()
+            }
+        });
 
-        // =================================================
+        // ---------------------------------------------
         // RESPONSE
-        // =================================================
+        // ---------------------------------------------
 
         return res.status(201).json({
-
             success: true,
-
             message:
                 "Registration submitted successfully",
 
             data: {
-
                 id_registration:
                     registrationResult.insertId,
 
@@ -544,7 +558,6 @@ const createPublicRegistration = async (req, res) => {
                     agent.agent_name,
 
                 sim: {
-
                     id_sim:
                         sim.id_sim,
 
@@ -572,12 +585,11 @@ const createPublicRegistration = async (req, res) => {
                     sim_type:
                         sim.sim_type,
 
-                    // Do not expose before approval.
-                    qr_code:
-                        null,
+                    // Never expose QR before approval.
+                    qr_code: null,
 
-                    activation_code:
-                        null,
+                    // Never expose activation code before approval.
+                    activation_code: null,
 
                     status:
                         "Pending"
@@ -590,23 +602,36 @@ const createPublicRegistration = async (req, res) => {
 
     } catch (error) {
 
-        try {
-            await connection.rollback();
-        } catch {}
-
-        connection.release();
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch {}
+        }
 
         console.error(
             "PUBLIC REGISTRATION ERROR:",
             error
         );
 
-        res.status(500).json({
+        if (error.code === "ER_DUP_ENTRY") {
+            return res.status(409).json({
+                success: false,
+                message:
+                    "Duplicate passport, ICCID, or registration data"
+            });
+        }
+
+        return res.status(500).json({
             success: false,
             message:
-                "Unable to submit registration",
-            error: error.message
+                "Unable to submit registration"
         });
+
+    } finally {
+
+        if (connection) {
+            connection.release();
+        }
     }
 };
 
@@ -619,14 +644,14 @@ const getPublicRegistrationStatus =
     async (req, res) => {
 
         try {
-
             const {
                 agentToken,
                 id
             } = req.params;
 
             const [rows] =
-                await pool.query(`
+                await pool.query(
+                    `
                     SELECT
                         r.id_registration,
 
@@ -689,13 +714,14 @@ const getPublicRegistrationStatus =
                       AND r.deleted_at IS NULL
 
                     LIMIT 1
-                `, [
-                    id,
-                    agentToken
-                ]);
+                    `,
+                    [
+                        id,
+                        agentToken
+                    ]
+                );
 
             if (!rows.length) {
-
                 return res.status(404).json({
                     success: false,
                     message:
@@ -703,17 +729,23 @@ const getPublicRegistrationStatus =
                 });
             }
 
-            const row = rows[0];
+            const row =
+                rows[0];
 
-            const approved =
+            const status =
                 String(
                     row.registration_status || ""
-                ).toLowerCase() === "approved";
+                )
+                .trim()
+                .toLowerCase();
 
-            res.json({
+            const approved =
+                status === "approved";
+
+            return res.json({
                 success: true,
-                data: {
 
+                data: {
                     id_registration:
                         row.id_registration,
 
@@ -723,14 +755,15 @@ const getPublicRegistrationStatus =
                     customer: {
                         first_name:
                             row.first_name,
+
                         last_name:
                             row.last_name,
+
                         passport_number:
                             row.passport_number
                     },
 
                     sim: {
-
                         id_sim:
                             row.id_sim,
 
@@ -778,20 +811,22 @@ const getPublicRegistrationStatus =
             });
 
         } catch (error) {
-
             console.error(
                 "PUBLIC REGISTRATION STATUS ERROR:",
                 error
             );
 
-            res.status(500).json({
+            return res.status(500).json({
                 success: false,
-                message:
-                    "Database error"
+                message: "Database error"
             });
         }
     };
 
+
+// =====================================================
+// EXPORT
+// =====================================================
 
 module.exports = {
     getRegistrationOptions,
