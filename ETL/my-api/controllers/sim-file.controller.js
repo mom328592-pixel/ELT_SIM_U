@@ -1,5 +1,16 @@
 const pool = require("../db");
 const { createAuditLog } = require("../utils/audit");
+const XLSX = require("xlsx");
+
+// Helper to convert cell values safely into trimmed string
+const toText = (value) => {
+    if (value === null || value === undefined) return "";
+    const text = String(value).trim();
+    if (/e\+?/i.test(text)) {
+        throw new Error("ICCID/IMSI must be stored as Excel Text, not scientific notation");
+    }
+    return text;
+};
 
 // =========================
 // GET ALL FILE HISTORY
@@ -97,12 +108,9 @@ const createFile = async (req, res) => {
         }
 
         const [agentRows] = await pool.query(`
-            SELECT
-                id_agent,
-                agent_name
+            SELECT id_agent, agent_name
             FROM agents
-            WHERE id_agent = ?
-              AND deleted_at IS NULL
+            WHERE id_agent = ? AND deleted_at IS NULL
         `, [id_agent]);
 
         if (agentRows.length === 0) {
@@ -113,10 +121,7 @@ const createFile = async (req, res) => {
         }
 
         const [result] = await pool.query(`
-            INSERT INTO history_sim_card_file (
-                file_name,
-                id_agent
-            )
+            INSERT INTO history_sim_card_file (file_name, id_agent)
             VALUES (?, ?)
         `, [file_name, id_agent]);
 
@@ -128,10 +133,7 @@ const createFile = async (req, res) => {
             action: "CREATE",
             targetEntity: "history_sim_card_file",
             targetId: newId,
-            metadata: {
-                file_name,
-                id_agent
-            }
+            metadata: { file_name, id_agent }
         });
 
         const [rows] = await pool.query(`
@@ -166,7 +168,7 @@ const createFile = async (req, res) => {
 };
 
 // =========================
-// IMPORT MULTIPLE SIMS
+// IMPORT MULTIPLE SIMS (JSON)
 // =========================
 const importSims = async (req, res) => {
     const connection = await pool.getConnection();
@@ -177,7 +179,6 @@ const importSims = async (req, res) => {
 
         if (!Array.isArray(sims) || sims.length === 0) {
             connection.release();
-
             return res.status(400).json({
                 success: false,
                 message: "sims must be a non-empty array"
@@ -185,17 +186,13 @@ const importSims = async (req, res) => {
         }
 
         const [fileRows] = await connection.query(`
-            SELECT
-                id_file,
-                file_name,
-                id_agent
+            SELECT id_file, file_name, id_agent
             FROM history_sim_card_file
             WHERE id_file = ?
         `, [id]);
 
         if (fileRows.length === 0) {
             connection.release();
-
             return res.status(404).json({
                 success: false,
                 message: "File history not found"
@@ -207,11 +204,8 @@ const importSims = async (req, res) => {
         const importedSims = [];
 
         for (const sim of sims) {
-
             if (!sim.iccid || !sim.imsi) {
-                throw new Error(
-                    "Each SIM must contain iccid and imsi"
-                );
+                throw new Error("Each SIM must contain iccid and imsi");
             }
 
             const [result] = await connection.query(`
@@ -277,7 +271,6 @@ const importSims = async (req, res) => {
         });
 
     } catch (error) {
-
         try {
             await connection.rollback();
         } catch (rollbackError) {
@@ -286,10 +279,7 @@ const importSims = async (req, res) => {
 
         connection.release();
 
-        console.error(
-            "POST /sim-files/:id/import ERROR:",
-            error
-        );
+        console.error("POST /sim-files/:id/import ERROR:", error);
 
         if (error.code === "ER_DUP_ENTRY") {
             return res.status(409).json({
@@ -316,8 +306,7 @@ const deleteFile = async (req, res) => {
         const [simRows] = await pool.query(`
             SELECT id_sim
             FROM sim_cards
-            WHERE id_file = ?
-              AND deleted_at IS NULL
+            WHERE id_file = ? AND deleted_at IS NULL
             LIMIT 1
         `, [id]);
 
@@ -365,7 +354,7 @@ const deleteFile = async (req, res) => {
 };
 
 // =========================
-// UPLOAD EXCEL / CSV FILE (FIXED)
+// UPLOAD EXCEL / CSV FILE
 // =========================
 const uploadSimFile = async (req, res) => {
     const connection = await pool.getConnection();
@@ -403,31 +392,11 @@ const uploadSimFile = async (req, res) => {
             });
         }
 
-        // READ EXCEL / CSV
-        const XLSX = require("xlsx");
-
-const workbook = XLSX.read(
-    req.file.buffer,
-    {
-        type: "buffer",
-        raw: true
-    }
-);
-
-const sheetName =
-    workbook.SheetNames[0];
-
-const worksheet =
-    workbook.Sheets[sheetName];
-
-const rows =
-    XLSX.utils.sheet_to_json(
-        worksheet,
-        {
-            defval: null,
-            raw: true
-        }
-    );
+        // PARSE EXCEL / CSV
+        const workbook = XLSX.read(req.file.buffer, { type: "buffer", raw: true });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: null, raw: true });
 
         if (rows.length === 0) {
             connection.release();
@@ -438,181 +407,22 @@ const rows =
         }
 
         await connection.beginTransaction();
-const toText = (value) => {
 
-    if (
-        value === null ||
-        value === undefined
-    ) {
-        return "";
-    }
-
-    const text =
-        String(value).trim();
-
-    if (
-        /e\+?/i.test(text)
-    ) {
-        throw new Error(
-            "ICCID/IMSI must be stored as Excel Text, not scientific notation"
-        );
-    }
-
-    return text;
-};
-for (let i = 0; i < rows.length; i++) {
-
-    const row = rows[i];
-
-    const getVal = (key) => {
-
-        const foundKey =
-            Object.keys(row).find(
-                k =>
-                    k.trim().toLowerCase() ===
-                    key.toLowerCase()
-            );
-
-        return foundKey
-            ? row[foundKey]
-            : null;
-    };
-
-
-    try {
-
-        const iccid =
-            toText(
-                getVal("iccid")
-            );
-
-        const imsi =
-            toText(
-                getVal("imsi")
-            );
-
-        const phone =
-            toText(
-                getVal("phone_number") ||
-                getVal("phone")
-            );
-
-        const qrCode =
-            toText(
-                getVal("qr_code") ||
-                getVal("qr")
-            );
-
-        const activationCode =
-            toText(
-                getVal("activation_code")
-            );
-
-        const idPackage =
-            getVal("id_package");
-
-        const idSimType =
-            getVal("id_sim_type");
-
-        const idSimStatus =
-            getVal("id_sim_status") || 1;
-
-
-        if (!iccid || !imsi) {
-
-            errors.push({
-                row: i + 2,
-                message:
-                    "ICCID and IMSI are required"
-            });
-
-            continue;
-        }
-
-        if (!idPackage) {
-
-            errors.push({
-                row: i + 2,
-                message:
-                    "id_package is required"
-            });
-
-            continue;
-        }
-
-
-        const [result] =
-            await connection.query(`
-                INSERT INTO sim_cards (
-                    iccid,
-                    imsi,
-                    qr_code,
-                    activation_code,
-                    phone_number,
-                    id_sim_type,
-                    id_package,
-                    id_sim_status,
-                    imported_by,
-                    id_file,
-                    imported_at
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-            `, [
-                iccid,
-                imsi,
-                qrCode || null,
-                activationCode || null,
-                phone || null,
-                idSimType || null,
-                Number(idPackage),
-                Number(idSimStatus),
-                req.user?.id_user || null,
-                id_file
-            ]);
-
-
-        importedSims.push({
-
-            id_sim:
-                result.insertId,
-
-            row:
-                i + 2,
-
-            iccid,
-            imsi,
-
-            phone_number:
-                phone || null
-        });
-
-    } catch (error) {
-
-        errors.push({
-
-            row:
-                i + 2,
-
-            message:
-                error.message
-        });
-    }
-}
-        // CREATE FILE HISTORY
+        // 1. CREATE FILE HISTORY RECORD
         const [fileResult] = await connection.query(
             `INSERT INTO history_sim_card_file (file_name, id_agent) VALUES (?, ?)`,
             [req.file.originalname, id_agent]
         );
-
         const id_file = fileResult.insertId;
+
         const importedSims = [];
         const errors = [];
 
-        // IMPORT EACH ROW
+        // 2. PROCESS ROWS
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i];
 
-            // 1. ດຶງຂໍ້ມູນຈາກ Flexible Header Matching
+            // Case-insensitive header lookup
             const getVal = (key) => {
                 const foundKey = Object.keys(row).find(
                     k => k.trim().toLowerCase() === key.toLowerCase()
@@ -620,92 +430,77 @@ for (let i = 0; i < rows.length; i++) {
                 return foundKey ? row[foundKey] : null;
             };
 
-            const rawIccid = getVal("iccid");
-            const rawImsi = getVal("imsi");
-            const rawPhone = getVal("phone_number") || getVal("phone");
-            const rawQr = getVal("qr_code") || getVal("qr");
-            const rawPackage = getVal("id_package");
-            const rawSimType = getVal("id_sim_type");
-            const rawSimStatus = getVal("id_sim_status");
-
-            // Check required fields
-            if (!rawIccid || !rawImsi) {
-                errors.push({
-                    row: i + 2,
-                    message: "iccid and imsi are required ( Check your Excel column header names )"
-                });
-                continue;
-            }
-
-            const iccid = String(rawIccid).trim();
-            const imsi = String(rawImsi).trim();
-            const phone_number = rawPhone ? String(rawPhone).trim() : null;
-
             try {
-                const [result] = await connection.query(
-                    `
-                    UPDATE sim_cards
-SET
-    iccid = ?,
-    imsi = ?,
-    qr_code = ?,
-    activation_code = ?,
-    phone_number = ?,
-    id_sim_type = ?,
-    id_package = ?,
-    id_sim_status = ?,
-    imported_by = ?,
-    id_file = ?,
-    imported_at = ?,
-    updated_at = NOW()
-WHERE id_sim = ?
-  AND deleted_at IS NULL
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
-                    `,
-                    [
+                const iccid = toText(getVal("iccid"));
+                const imsi = toText(getVal("imsi"));
+                const phone = toText(getVal("phone_number") || getVal("phone"));
+                const qrCode = toText(getVal("qr_code") || getVal("qr"));
+                const activationCode = toText(getVal("activation_code"));
+                const idPackage = getVal("id_package");
+                const idSimType = getVal("id_sim_type");
+                const idSimStatus = getVal("id_sim_status") || 1;
+
+                if (!iccid || !imsi) {
+                    errors.push({
+                        row: i + 2,
+                        message: "iccid and imsi are required"
+                    });
+                    continue;
+                }
+
+                if (!idPackage) {
+                    errors.push({
+                        row: i + 2,
+                        message: "id_package is required"
+                    });
+                    continue;
+                }
+
+                const [result] = await connection.query(`
+                    INSERT INTO sim_cards (
                         iccid,
                         imsi,
-                        rawQr || null,
-                        rawPackage || null,
+                        qr_code,
+                        activation_code,
                         phone_number,
-                        rawSimType || 2, // Default type
-                        rawSimStatus || 1, // Default status
-                        req.user ? req.user.id_user : null,
+                        id_sim_type,
+                        id_package,
+                        id_sim_status,
+                        imported_by,
                         id_file,
-                        getVal("link_url") || null
-                    ]
-                );
+                        imported_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                `, [
+                    iccid,
+                    imsi,
+                    qrCode || null,
+                    activationCode || null,
+                    phone || null,
+                    idSimType || null,
+                    Number(idPackage),
+                    Number(idSimStatus),
+                    req.user ? req.user.id_user : null,
+                    id_file
+                ]);
 
                 importedSims.push({
                     id_sim: result.insertId,
                     row: i + 2,
                     iccid,
                     imsi,
-                    phone_number
+                    phone_number: phone || null
                 });
 
             } catch (error) {
-                console.error(`Row ${i + 2} Insert Failed:`, error.message);
-                
-                if (error.code === "ER_DUP_ENTRY") {
-                    errors.push({
-                        row: i + 2,
-                        iccid,
-                        imsi,
-                        message: "Duplicate ICCID or IMSI"
-                    });
-                } else {
-                    errors.push({
-                        row: i + 2,
-                        iccid,
-                        imsi,
-                        message: error.message
-                    });
-                }
+                errors.push({
+                    row: i + 2,
+                    message: error.message
+                });
             }
         }
 
-        // ຖ້າບໍ່ມີແຖວໃດ Insert ໄດ້ເລີຍ ให้ Rollback
+        // ROLLBACK IF NO VALID SIMS STORED
         if (importedSims.length === 0) {
             await connection.rollback();
             connection.release();
@@ -734,18 +529,15 @@ WHERE id_sim = ?
         await connection.commit();
         connection.release();
 
-        // 🟢 ເພີ່ມ key Standard (total, valid, invalid) ໃຫ້ Frontend ນໍາໄປສະແດງຜົນໃນ Card ໄດ້ເລີຍ
         res.status(201).json({
             success: true,
             message: "File uploaded and SIMs imported successfully",
             data: {
                 id_file,
                 file_name: req.file.originalname,
-                // ແບບເດີມ
                 total_rows: rows.length,
                 imported_count: importedSims.length,
                 failed_count: errors.length,
-                // ແບບມາດຕະຖານ ທີ່ Frontend Card มັກເອົາໄປ Binding directly
                 total: rows.length,
                 valid: importedSims.length,
                 invalid: errors.length,
@@ -773,9 +565,6 @@ WHERE id_sim = ?
     }
 };
 
-// =========================
-// EXPORT
-// =========================
 module.exports = {
     getAllFiles,
     getFileById,

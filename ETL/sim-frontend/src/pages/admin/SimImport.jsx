@@ -104,7 +104,7 @@ function SimImport() {
           row.id_sim_type || 2,
         id_sim_status:
           row.id_sim_status || 1,
-        package: row.package || "",
+        id_package: row.id_package || "",
         qr_code: row.qr_code || "",
         link_url: row.link_url || "",
         errors,
@@ -554,7 +554,7 @@ function SimImport() {
                   <th>Phone</th>
                   <th>Type</th>
                   <th>Status</th>
-                  <th>Package</th>
+                  <th>id_Package</th>
                   <th>Validation</th>
                 </tr>
               </thead>
@@ -593,7 +593,7 @@ function SimImport() {
                       </td>
 
                       <td>
-                        {row.package ||
+                        {row.id_package ||
                           "-"}
                       </td>
 
