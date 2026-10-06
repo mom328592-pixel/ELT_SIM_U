@@ -503,7 +503,6 @@ const getDashboardReports = async (
 
                 FROM customers
 
-                WHERE deleted_at IS NULL
             `);
 
         // =================================================
