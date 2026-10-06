@@ -266,7 +266,7 @@ function Agents() {
               <tbody>
                 {paginatedAgents.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="empty-row">
+                    <td colSpan="9" className="empty-row">
                       No agents found
                     </td>
                   </tr>
@@ -310,55 +310,50 @@ function Agents() {
                           </button>
                         </div>
                       </td>
+
+                      <td>
+                        {agent.public_url ? (
+                          <div>
+                            <a
+                              href={agent.public_url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Open Link
+                            </a>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                navigator.clipboard.writeText(
+                                  agent.public_url
+                                )
+                              }
+                            >
+                              Copy
+                            </button>
+                          </div>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+
+                      <td>
+                        <div>
+                          Total: {agent.total_registrations || 0}
+                        </div>
+
+                        <div>
+                          Pending: {agent.pending_registrations || 0}
+                        </div>
+
+                        <div>
+                          Approved: {agent.approved_registrations || 0}
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
-                <td>
-    {agent.public_url ? (
-        <div>
-            <a
-                href={agent.public_url}
-                target="_blank"
-                rel="noreferrer"
-            >
-                Open Link
-            </a>
-
-            <button
-                type="button"
-                onClick={() =>
-                    navigator.clipboard.writeText(
-                        agent.public_url
-                    )
-                }
-            >
-                Copy
-            </button>
-        </div>
-    ) : (
-        "-"
-    )}
-</td>
-
-<td>
-    <div>
-        Total:
-        {" "}
-        {agent.total_registrations || 0}
-    </div>
-
-    <div>
-        Pending:
-        {" "}
-        {agent.pending_registrations || 0}
-    </div>
-
-    <div>
-        Approved:
-        {" "}
-        {agent.approved_registrations || 0}
-    </div>
-</td>
               </tbody>
             </table>
 
