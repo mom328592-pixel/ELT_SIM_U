@@ -3509,3 +3509,763 @@ tbody tr:hover {
     width: auto;
   }
 }
+/* =====================================================
+   PROFESSIONAL RESPONSIVE OVERRIDES
+   ===================================================== */
+
+* {
+    box-sizing:
+        border-box;
+}
+
+html,
+body,
+#root {
+    width:
+        100%;
+
+    min-width:
+        0;
+
+    min-height:
+        100%;
+
+    margin:
+        0;
+}
+
+body {
+    overflow-x:
+        hidden;
+
+    background:
+        #f4f6fa;
+}
+
+#root {
+    max-width:
+        none;
+
+    text-align:
+        left;
+
+    border:
+        0;
+}
+
+.app-layout,
+.main-content,
+.page-content,
+.page-container {
+    width:
+        100%;
+
+    min-width:
+        0;
+}
+
+.page-container {
+    max-width:
+        1440px;
+
+    margin:
+        0 auto;
+}
+
+/* =====================================================
+   TABLE
+   ===================================================== */
+
+.table-wrapper {
+    width:
+        100%;
+
+    max-width:
+        100%;
+
+    overflow-x:
+        auto;
+
+    overflow-y:
+        hidden;
+
+    -webkit-overflow-scrolling:
+        touch;
+}
+
+.table-wrapper table {
+    min-width:
+        900px;
+}
+
+/* =====================================================
+   FORM
+   ===================================================== */
+
+input,
+select,
+textarea,
+button {
+    max-width:
+        100%;
+}
+
+.header-actions,
+.action-buttons,
+.modal-actions {
+    display:
+        flex;
+
+    flex-wrap:
+        wrap;
+
+    gap:
+        8px;
+}
+
+/* =====================================================
+   AGENT HELP
+   ===================================================== */
+
+.agent-help-box {
+    display:
+        flex;
+
+    gap:
+        12px;
+
+    margin-bottom:
+        16px;
+
+    padding:
+        14px
+        16px;
+
+    border:
+        1px solid
+        #eaecf0;
+
+    border-radius:
+        14px;
+
+    background:
+        #fff;
+}
+
+.agent-help-icon {
+    width:
+        38px;
+
+    height:
+        38px;
+
+    flex:
+        0 0 38px;
+
+    display:
+        grid;
+
+    place-items:
+        center;
+
+    border-radius:
+        10px;
+
+    background:
+        #eef4ff;
+
+    color:
+        #175cd3;
+
+    font-weight:
+        800;
+}
+
+.agent-help-box strong {
+    display:
+        block;
+
+    margin-bottom:
+        2px;
+
+    color:
+        #101828;
+}
+
+.agent-help-box p {
+    margin:
+        0;
+
+    color:
+        #667085;
+
+    font-size:
+        13px;
+
+    line-height:
+        1.55;
+}
+
+/* =====================================================
+   AGENT LINK
+   ===================================================== */
+
+.agent-link-cell {
+    min-width:
+        320px;
+}
+
+.agent-link-url {
+    display:
+        block;
+
+    padding:
+        9px
+        11px;
+
+    border:
+        1px solid
+        #d0d5dd;
+
+    border-radius:
+        9px;
+
+    background:
+        #fff;
+
+    color:
+        #344054;
+
+    font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Monaco,
+        Consolas,
+        monospace;
+
+    font-size:
+        11px;
+
+    overflow-wrap:
+        anywhere;
+}
+
+.agent-link-note {
+    margin:
+        5px
+        0
+        7px;
+
+    color:
+        #667085;
+
+    font-size:
+        11px;
+}
+
+.agent-action-stack {
+    display:
+        flex;
+
+    flex-wrap:
+        wrap;
+
+    gap:
+        6px;
+}
+
+.agent-stat-grid {
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(
+                0,
+                1fr
+            )
+        );
+
+    gap:
+        6px;
+
+    min-width:
+        170px;
+}
+
+.agent-stat {
+    padding:
+        8px
+        10px;
+
+    border:
+        1px solid
+        #eaecf0;
+
+    border-radius:
+        9px;
+
+    background:
+        #f8fafc;
+}
+
+.agent-stat span {
+    display:
+        block;
+
+    color:
+        #667085;
+
+    font-size:
+        10px;
+
+    text-transform:
+        uppercase;
+}
+
+.agent-stat strong {
+    display:
+        block;
+
+    margin-top:
+        2px;
+
+    color:
+        #101828;
+
+    font-size:
+        15px;
+}
+
+/* =====================================================
+   FEEDBACK
+   ===================================================== */
+
+.agent-feedback {
+    margin-bottom:
+        16px;
+
+    padding:
+        12px
+        14px;
+
+    border:
+        1px solid
+        #d0d5dd;
+
+    border-radius:
+        12px;
+
+    background:
+        #fff;
+
+    color:
+        #344054;
+}
+
+.agent-feedback.success {
+    border-color:
+        #abefc6;
+
+    background:
+        #f6fef9;
+
+    color:
+        #067647;
+}
+
+.agent-feedback.error {
+    border-color:
+        #fecdca;
+
+    background:
+        #fffbfa;
+
+    color:
+        #b42318;
+}
+
+/* =====================================================
+   403
+   ===================================================== */
+
+.access-denied-page {
+    min-height:
+        100svh;
+
+    display:
+        grid;
+
+    place-items:
+        center;
+
+    padding:
+        24px;
+
+    background:
+        #f4f6fa;
+}
+
+.access-denied-card {
+    width:
+        min(
+            520px,
+            100%
+        );
+
+    padding:
+        32px;
+
+    border:
+        1px solid
+        #eaecf0;
+
+    border-radius:
+        20px;
+
+    background:
+        #fff;
+
+    box-shadow:
+        0
+        12px
+        36px
+        rgba(
+            16,
+            24,
+            40,
+            0.08
+        );
+
+    text-align:
+        center;
+}
+
+.access-denied-code {
+    display:
+        inline-flex;
+
+    min-height:
+        34px;
+
+    align-items:
+        center;
+
+    padding:
+        0
+        12px;
+
+    border-radius:
+        999px;
+
+    background:
+        #fef3f2;
+
+    color:
+        #b42318;
+
+    font-size:
+        12px;
+
+    font-weight:
+        800;
+}
+
+.access-denied-card h1 {
+    margin:
+        16px
+        0
+        8px;
+
+    font-size:
+        28px;
+}
+
+.access-denied-card p {
+    margin-bottom:
+        18px;
+
+    color:
+        #667085;
+
+    line-height:
+        1.6;
+}
+
+/* =====================================================
+   MOBILE SIDEBAR
+   ===================================================== */
+
+.sidebar-overlay {
+    position:
+        fixed;
+
+    inset:
+        0;
+
+    z-index:
+        89;
+
+    border:
+        0;
+
+    background:
+        rgba(
+            15,
+            23,
+            42,
+            0.38
+        );
+
+    padding:
+        0;
+}
+
+.mobile-header {
+    display:
+        none;
+}
+
+.mobile-menu-button {
+    width:
+        42px;
+
+    height:
+        42px;
+
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    border:
+        1px solid
+        #e4e7ec;
+
+    border-radius:
+        10px;
+
+    background:
+        #fff;
+
+    color:
+        #111827;
+
+    font-size:
+        20px;
+
+    cursor:
+        pointer;
+}
+
+.sidebar-mobile-close {
+    display:
+        none;
+}
+
+/* =====================================================
+   MOBILE
+   ===================================================== */
+
+@media (
+    max-width:
+    900px
+) {
+
+    .sidebar {
+        transform:
+            translateX(
+                -105%
+            );
+
+        left:
+            0;
+
+        z-index:
+            90;
+
+        transition:
+            transform
+            0.22s
+            ease;
+    }
+
+    .sidebar.open {
+        transform:
+            translateX(
+                0
+            );
+    }
+
+    .sidebar-mobile-close {
+        display:
+            inline-flex;
+
+        align-items:
+            center;
+
+        justify-content:
+            center;
+
+        width:
+            36px;
+
+        height:
+            36px;
+
+        margin-left:
+            auto;
+
+        border:
+            1px solid
+            rgba(
+                255,
+                255,
+                255,
+                0.14
+            );
+
+        border-radius:
+            9px;
+
+        background:
+            transparent;
+
+        color:
+            #fff;
+
+        cursor:
+            pointer;
+
+        font-size:
+            22px;
+    }
+
+    .mobile-header {
+        display:
+            flex;
+
+        align-items:
+            center;
+
+        gap:
+            12px;
+
+        padding:
+            10px
+            14px;
+
+        border-bottom:
+            1px solid
+            #e5e7eb;
+
+        background:
+            #fff;
+    }
+
+    .mobile-header-title {
+        min-width:
+            0;
+    }
+
+    .mobile-header-title strong,
+    .mobile-header-title span {
+        display:
+            block;
+
+        overflow:
+            hidden;
+
+        text-overflow:
+            ellipsis;
+
+        white-space:
+            nowrap;
+    }
+
+    .mobile-header-title strong {
+        font-size:
+            14px;
+
+        color:
+            #101828;
+    }
+
+    .mobile-header-title span {
+        margin-top:
+            2px;
+
+        font-size:
+            11px;
+
+        color:
+            #667085;
+    }
+
+    .topbar-main {
+        display:
+            none;
+    }
+}
+
+@media (
+    max-width:
+    768px
+) {
+
+    .page-content {
+        padding:
+            14px;
+    }
+
+    .page-header {
+        flex-direction:
+            column;
+    }
+
+    .page-header
+        .primary-button {
+        width:
+            100%;
+    }
+
+    .agent-action-stack {
+        flex-direction:
+            column;
+
+        align-items:
+            stretch;
+    }
+
+    .agent-action-stack
+        button,
+    .agent-action-stack
+        a {
+        width:
+            100%;
+
+        text-align:
+            center;
+    }
+
+    .modal-card {
+        width:
+            calc(
+                100vw - 20px
+            );
+
+        max-height:
+            calc(
+                100svh - 20px
+            );
+
+        overflow-y:
+            auto;
+    }
+}

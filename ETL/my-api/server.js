@@ -14,106 +14,173 @@ app.set("trust proxy", 1);
 // RATE LIMITER
 // =====================================================
 
-const rateLimit = require("express-rate-limit");
+const rateLimit =
+    require(
+        "express-rate-limit"
+    );
 
-const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
-    standardHeaders: true,
-    legacyHeaders: false,
+const loginLimiter =
+    rateLimit({
+        windowMs:
+            15 * 60 * 1000,
 
-    message: {
-        success: false,
-        message:
-            "Too many login attempts. Please try again later.",
-    },
-});
+        max: 10,
+
+        standardHeaders:
+            true,
+
+        legacyHeaders:
+            false,
+
+        message: {
+            success: false,
+            message:
+                "Too many login attempts. Please try again later.",
+        },
+    });
 
 // =====================================================
 // ROUTES
 // =====================================================
 
 const rolesRoutes =
-    require("./routes/roles.routes");
+    require(
+        "./routes/roles.routes"
+    );
 
 const usersRoutes =
-    require("./routes/users.routes");
+    require(
+        "./routes/users.routes"
+    );
 
 const agentsRoutes =
-    require("./routes/agents.routes");
+    require(
+        "./routes/agents.routes"
+    );
+
+const agentPortalRoutes =
+    require(
+        "./routes/agent-portal.routes"
+    );
 
 const simsRoutes =
-    require("./routes/sims.routes");
+    require(
+        "./routes/sims.routes"
+    );
 
 const customersRoutes =
-    require("./routes/customers.routes");
+    require(
+        "./routes/customers.routes"
+    );
 
 const registrationsRoutes =
-    require("./routes/registrations.routes");
+    require(
+        "./routes/registrations.routes"
+    );
 
 const authRoutes =
-    require("./routes/auth.routes");
+    require(
+        "./routes/auth.routes"
+    );
 
 const simFileRoutes =
-    require("./routes/sim-file.routes");
+    require(
+        "./routes/sim-file.routes"
+    );
 
 const profileRoutes =
-    require("./routes/profile.routes");
+    require(
+        "./routes/profile.routes"
+    );
 
 const auditLogsRoutes =
-    require("./routes/audit-logs.routes");
+    require(
+        "./routes/audit-logs.routes"
+    );
 
 const statusUsersRoutes =
-    require("./routes/status-users.routes");
+    require(
+        "./routes/status-users.routes"
+    );
 
 const reportsRoutes =
-    require("./routes/reports.routes");
+    require(
+        "./routes/reports.routes"
+    );
 
 const exportRoutes =
-    require("./routes/export.routes");
+    require(
+        "./routes/export.routes"
+    );
 
 const simFileHistoryRoutes =
-    require("./routes/sim-file-history.routes");
+    require(
+        "./routes/sim-file-history.routes"
+    );
 
 const simTypesRoutes =
-    require("./routes/sim-types.routes");
+    require(
+        "./routes/sim-types.routes"
+    );
 
 const simStatusRoutes =
-    require("./routes/sim-status.routes");
+    require(
+        "./routes/sim-status.routes"
+    );
 
 const registrationStatusRoutes =
-    require("./routes/registration-status.routes");
+    require(
+        "./routes/registration-status.routes"
+    );
 
 const userStatusRoutes =
-    require("./routes/user-status.routes");
+    require(
+        "./routes/user-status.routes"
+    );
 
 const sessionRoutes =
-    require("./routes/session.routes");
+    require(
+        "./routes/session.routes"
+    );
 
 const publicRegistrationRoutes =
-    require("./routes/public-registration.routes");
+    require(
+        "./routes/public-registration.routes"
+    );
 
 const passportOcrRoutes =
-    require("./routes/passport-ocr.routes");
+    require(
+        "./routes/passport-ocr.routes"
+    );
 
 const packagesRoutes =
-    require("./routes/packages.routes");
+    require(
+        "./routes/packages.routes"
+    );
 
 const searchRoutes =
-    require("./routes/search.routes");
+    require(
+        "./routes/search.routes"
+    );
 
 const uploadsRoutes =
-    require("./routes/uploads.routes");
+    require(
+        "./routes/uploads.routes"
+    );
 
 const registrationReviewRoutes =
-    require("./routes/registration-review.routes");
+    require(
+        "./routes/registration-review.routes"
+    );
 
 // =====================================================
 // SWAGGER
 // =====================================================
 
 const swaggerUi =
-    require("swagger-ui-express");
+    require(
+        "swagger-ui-express"
+    );
 
 const swaggerSpec =
     require("./swagger");
@@ -123,15 +190,20 @@ const swaggerSpec =
 // =====================================================
 
 const authMiddlewareRaw =
-    require("./middlewares/auth.middleware");
+    require(
+        "./middlewares/auth.middleware"
+    );
 
 const authenticateToken =
-    typeof authMiddlewareRaw === "function"
+    typeof authMiddlewareRaw ===
+    "function"
         ? authMiddlewareRaw
         : authMiddlewareRaw.authenticateToken;
 
 const authorizeRoles =
-    require("./middlewares/role.middleware");
+    require(
+        "./middlewares/role.middleware"
+    );
 
 // =====================================================
 // VERIFY MIDDLEWARES
@@ -181,49 +253,49 @@ const allowedOrigins = [
 
 app.use(
     cors({
-        origin: function (
-            origin,
-            callback
-        ) {
-            // Allow server-to-server / no origin
-            if (!origin) {
-                return callback(
-                    null,
-                    true
-                );
-            }
-
-            // Production + localhost
-            if (
-                allowedOrigins.includes(
-                    origin
-                )
+        origin:
+            function (
+                origin,
+                callback
             ) {
+                if (!origin) {
+                    return callback(
+                        null,
+                        true
+                    );
+                }
+
+                if (
+                    allowedOrigins.includes(
+                        origin
+                    )
+                ) {
+                    return callback(
+                        null,
+                        true
+                    );
+                }
+
+                const isVercelPreview =
+                    /^https:\/\/eltsimu-[a-z0-9-]+\.vercel\.app$/i.test(
+                        origin
+                    );
+
+                if (
+                    isVercelPreview
+                ) {
+                    return callback(
+                        null,
+                        true
+                    );
+                }
+
                 return callback(
-                    null,
-                    true
+                    new Error(
+                        "Not allowed by CORS"
+                    )
                 );
-            }
-
-            // Vercel preview deployments
-            const isVercelPreview =
-                /^https:\/\/eltsimu-[a-z0-9-]+\.vercel\.app$/i.test(
-                    origin
-                );
-
-            if (isVercelPreview) {
-                return callback(
-                    null,
-                    true
-                );
-            }
-
-            return callback(
-                new Error(
-                    "Not allowed by CORS"
-                )
-            );
-        },
+            },
 
         credentials: true,
 
@@ -246,7 +318,7 @@ app.use(
 );
 
 // =====================================================
-// BODY PARSER
+// BODY
 // =====================================================
 
 app.use(
@@ -263,24 +335,15 @@ app.use(
 );
 
 // =====================================================
-// IMPORTANT SECURITY CHANGE
-// =====================================================
-//
-// DO NOT use:
-// app.use("/uploads", express.static(...))
-//
-// Passport images are private personal data.
-// They must not be directly accessible by URL.
-//
-// =====================================================
-
-// =====================================================
-// HEALTH CHECK
+// HEALTH
 // =====================================================
 
 app.get(
     "/health",
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
         try {
             const pool =
                 require("./db");
@@ -317,21 +380,20 @@ app.get(
 );
 
 // =====================================================
-// SWAGGER JSON
+// SWAGGER
 // =====================================================
 
 app.get(
     "/api-docs.json",
-    (req, res) => {
+    (
+        req,
+        res
+    ) => {
         return res.json(
             swaggerSpec
         );
     }
 );
-
-// =====================================================
-// SWAGGER UI
-// =====================================================
 
 app.use(
     "/api-docs",
@@ -353,7 +415,10 @@ app.use(
 
 app.get(
     "/",
-    (req, res) => {
+    (
+        req,
+        res
+    ) => {
         return res.json({
             success: true,
             message:
@@ -377,7 +442,7 @@ app.use(
 );
 
 // =====================================================
-// USER / ROLE MANAGEMENT
+// ROLE MANAGEMENT
 // =====================================================
 
 app.use(
@@ -394,11 +459,28 @@ app.use(
     usersRoutes
 );
 
+// =====================================================
+// AGENTS
+// ROLE 1 + ROLE 2
+// =====================================================
+
 app.use(
     "/agents",
     authenticateToken,
     authorizeRoles(1, 2),
     agentsRoutes
+);
+
+// =====================================================
+// AGENT PORTAL
+// ROLE 3 ONLY
+// =====================================================
+
+app.use(
+    "/agent-portal",
+    authenticateToken,
+    authorizeRoles(3),
+    agentPortalRoutes
 );
 
 // =====================================================
@@ -425,34 +507,37 @@ app.use(
 
 // =====================================================
 // SIM MANAGEMENT
+// ROLE 1 + ROLE 2 ONLY
 // =====================================================
 
 app.use(
     "/sims",
     authenticateToken,
-    authorizeRoles(1, 2, 3),
+    authorizeRoles(1, 2),
     simsRoutes
 );
 
 // =====================================================
 // CUSTOMER MANAGEMENT
+// ROLE 1 + ROLE 2 ONLY
 // =====================================================
 
 app.use(
     "/customers",
     authenticateToken,
-    authorizeRoles(1, 2, 3),
+    authorizeRoles(1, 2),
     customersRoutes
 );
 
 // =====================================================
 // REGISTRATIONS
+// ROLE 1 + ROLE 2 ONLY
 // =====================================================
 
 app.use(
     "/registrations",
     authenticateToken,
-    authorizeRoles(1, 2, 3),
+    authorizeRoles(1, 2),
     registrationsRoutes
 );
 
@@ -492,7 +577,6 @@ app.use(
 
 // =====================================================
 // REPORTS
-// ROLE 1 + ROLE 2
 // =====================================================
 
 app.use(
@@ -529,7 +613,7 @@ app.use(
 app.use(
     "/export",
     authenticateToken,
-    authorizeRoles(1, 2, 3),
+    authorizeRoles(1, 2),
     exportRoutes
 );
 
@@ -551,30 +635,23 @@ app.use(
 app.use(
     "/search",
     authenticateToken,
-    authorizeRoles(1, 2, 3),
+    authorizeRoles(1, 2),
     searchRoutes
 );
 
 // =====================================================
-// UPLOADS API
-// =====================================================
-//
-// NOTE:
-// This is NOT public static hosting.
-// Requests must authenticate first.
-//
+// UPLOADS
 // =====================================================
 
 app.use(
     "/uploads",
     authenticateToken,
-    authorizeRoles(1, 2, 3),
+    authorizeRoles(1, 2),
     uploadsRoutes
 );
 
 // =====================================================
 // SIM TYPES
-// ROLE 1 ONLY
 // =====================================================
 
 app.use(
@@ -619,14 +696,7 @@ app.use(
 
 // =====================================================
 // PUBLIC CUSTOMER REGISTRATION
-// =====================================================
-//
-// IMPORTANT:
-// These routes are intentionally outside
-// authenticateToken.
-//
-// Customer does not need internal login.
-//
+// NO LOGIN
 // =====================================================
 
 app.use(
@@ -644,7 +714,10 @@ app.use(
 // =====================================================
 
 app.use(
-    (req, res) => {
+    (
+        req,
+        res
+    ) => {
         return res.status(404).json({
             success: false,
             message:
@@ -654,7 +727,7 @@ app.use(
 );
 
 // =====================================================
-// GLOBAL ERROR HANDLER
+// GLOBAL ERROR
 // =====================================================
 
 app.use(
@@ -672,10 +745,11 @@ app.use(
         if (
             res.headersSent
         ) {
-            return next(error);
+            return next(
+                error
+            );
         }
 
-        // CORS error
         if (
             error.message ===
             "Not allowed by CORS"
@@ -696,11 +770,12 @@ app.use(
 );
 
 // =====================================================
-// START SERVER
+// START
 // =====================================================
 
 const PORT =
-    process.env.PORT || 3000;
+    process.env.PORT ||
+    3000;
 
 app.listen(
     PORT,

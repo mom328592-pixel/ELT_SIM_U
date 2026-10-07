@@ -1,100 +1,195 @@
-import { useState } from "react";
+import {
+    useState,
+} from "react";
+
 import Sidebar from "../components/Sidebar";
 
 function AdminLayout({
-  user,
-  onLogout,
-  children,
+    user,
+    onLogout,
+    children,
 }) {
-  const [sidebarCollapsed, setSidebarCollapsed] =
-    useState(false);
 
-  return (
-    <div
-      className={`app-layout ${
-        sidebarCollapsed ? "sidebar-collapsed" : ""
-      }`}
-    >
+    const [
+        sidebarCollapsed,
+        setSidebarCollapsed,
+    ] = useState(false);
 
-      {/* =========================
-          SIDEBAR
-      ========================= */}
-      <Sidebar
-        user={user}
-        onLogout={onLogout}
-        collapsed={sidebarCollapsed}
-        onToggle={() =>
-          setSidebarCollapsed(
-            (prev) => !prev
-          )
-        }
-      />
+    const [
+        mobileSidebarOpen,
+        setMobileSidebarOpen,
+    ] = useState(false);
 
-      {/* =========================
-          MAIN CONTENT
-      ========================= */}
-      <main className="main-content">
+    return (
+        <div
+            className={`app-layout ${
+                sidebarCollapsed
+                    ? "sidebar-collapsed"
+                    : ""
+            }`}
+        >
 
-        {/* =========================
-            TOPBAR
-        ========================= */}
-        <header className="topbar-main">
+            {/* ========================================
+                SIDEBAR
+            ========================================= */}
 
-          <div className="topbar-title">
-            <h2>
-              SIM Registration System
-            </h2>
+            <Sidebar
+                user={user}
+                onLogout={onLogout}
+                collapsed={
+                    sidebarCollapsed
+                }
+                onToggle={() =>
+                    setSidebarCollapsed(
+                        (
+                            prev
+                        ) =>
+                            !prev
+                    )
+                }
+                mobileOpen={
+                    mobileSidebarOpen
+                }
+                onClose={() =>
+                    setMobileSidebarOpen(
+                        false
+                    )
+                }
+            />
 
-            <span>
-              Management Dashboard
-            </span>
-          </div>
+            {/* ========================================
+                MOBILE OVERLAY
+            ========================================= */}
 
-          <div className="topbar-right">
+            {mobileSidebarOpen && (
+                <button
+                    type="button"
+                    className="sidebar-overlay"
+                    aria-label="Close navigation"
+                    onClick={() =>
+                        setMobileSidebarOpen(
+                            false
+                        )
+                    }
+                />
+            )}
 
-            {/* Notification */}
+            {/* ========================================
+                MAIN
+            ========================================= */}
 
-            {/* User */}
-            <div className="topbar-user">
+            <main className="main-content">
 
-              <div className="topbar-avatar">
-                {(user?.fullname ||
-                  user?.username ||
-                  "U")
-                  .charAt(0)
-                  .toUpperCase()}
-              </div>
+                {/* MOBILE HEADER */}
 
-              <div>
-                <strong>
-                  {user?.fullname ||
-                    user?.username ||
-                    "User"}
-                </strong>
+                <div className="mobile-header">
 
-                <span>
-                  {user?.role_name ||
-                    "User"}
-                </span>
-              </div>
+                    <button
+                        type="button"
+                        className="mobile-menu-button"
+                        onClick={() =>
+                            setMobileSidebarOpen(
+                                true
+                            )
+                        }
+                        aria-label="Open navigation"
+                    >
+                        ☰
+                    </button>
 
-            </div>
+                    <div className="mobile-header-title">
 
-          </div>
+                        <strong>
+                            ELT SIM
+                        </strong>
 
-        </header>
+                        <span>
+                            {
+                                user?.role_name ||
+                                "Management Dashboard"
+                            }
+                        </span>
 
-        {/* =========================
-            PAGE
-        ========================= */}
-        <section className="page-content">
-          {children}
-        </section>
+                    </div>
 
-      </main>
+                </div>
 
-    </div>
-  );
+                {/* TOPBAR */}
+
+                <header className="topbar-main">
+
+                    <div className="topbar-title">
+
+                        <h2>
+                            SIM Registration System
+                        </h2>
+
+                        <span>
+                            {
+                                Number(
+                                    user?.id_role ??
+                                        user?.role_id
+                                ) === 3
+                                    ? "Agent Dashboard"
+                                    : "Management Dashboard"
+                            }
+                        </span>
+
+                    </div>
+
+                    <div className="topbar-right">
+
+                        <div className="topbar-user">
+
+                            <div className="topbar-avatar">
+
+                                {(
+                                    user?.fullname ||
+                                    user?.username ||
+                                    "U"
+                                )
+                                    .charAt(
+                                        0
+                                    )
+                                    .toUpperCase()}
+
+                            </div>
+
+                            <div>
+
+                                <strong>
+                                    {
+                                        user?.fullname ||
+                                        user?.username ||
+                                        "User"
+                                    }
+                                </strong>
+
+                                <span>
+                                    {
+                                        user?.role_name ||
+                                        "User"
+                                    }
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </header>
+
+                {/* PAGE */}
+
+                <section className="page-content">
+                    {children}
+                </section>
+
+            </main>
+
+        </div>
+    );
 }
 
 export default AdminLayout;

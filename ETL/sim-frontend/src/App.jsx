@@ -1,847 +1,1029 @@
 import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
 } from "react";
 
 import {
-  BrowserRouter,
-  Navigate,
-  Route,
-  Routes,
+    BrowserRouter,
+    Navigate,
+    Route,
+    Routes,
 } from "react-router-dom";
 
 import "./App.css";
 
-// =====================================================
-// LAYOUTS
-// =====================================================
-
 import AdminLayout from "./layouts/AdminLayout";
 import CustomerLayout from "./layouts/CustomerLayout";
 
-// =====================================================
-// ADMIN PAGES
-// =====================================================
-
 import Dashboard from "./pages/admin/Dashboard";
+import AgentDashboard from "./pages/admin/AgentDashboard";
 import Management from "./pages/admin/Management";
 import SimCenter from "./pages/admin/SimCenter";
 import Registrations from "./pages/admin/Registrations";
 import Reports from "./pages/admin/Reports";
 import AdminSettings from "./pages/admin/AdminSettings";
 
-// =====================================================
-// CUSTOMER
-// =====================================================
-
 import CustomerRegistration from "./pages/customer/CustomerRegistration";
-
-// =====================================================
-// COMPONENT
-// =====================================================
 
 import Toast from "./components/Toast";
 
 // =====================================================
-// CONSTANTS
+// API
 // =====================================================
 
 const API_URL =
-  import.meta.env.VITE_API_URL ||
-  "https://eltsimu.onrender.com";
+    import.meta.env.VITE_API_URL ||
+    (
+        import.meta.env.DEV
+            ? "http://localhost:3000"
+            : "https://eltsimu.onrender.com"
+    );
+
+// =====================================================
+// IDLE
+// =====================================================
 
 const IDLE_TIME =
-  15 * 60 * 1000;
+    15 * 60 * 1000;
 
 const WARNING_TIME =
-  13 * 60 * 1000;
+    13 * 60 * 1000;
+
+// =====================================================
+// ACCESS DENIED
+// =====================================================
+
+const AccessDenied =
+    () => {
+        return (
+            <div className="access-denied-page">
+
+                <div className="access-denied-card">
+
+                    <span className="access-denied-code">
+                        403 ACCESS DENIED
+                    </span>
+
+                    <h1>
+                        Access Restricted
+                    </h1>
+
+                    <p>
+                        Your account is signed in,
+                        but you do not have permission
+                        to open this module.
+                    </p>
+
+                    <button
+                        type="button"
+                        className="primary-button"
+                        onClick={() => {
+                            const user =
+                                JSON.parse(
+                                    localStorage.getItem(
+                                        "user"
+                                    ) || "null"
+                                );
+
+                            const roleId =
+                                Number(
+                                    user?.id_role ??
+                                        user?.role_id
+                                );
+
+                            window.location.href =
+                                roleId === 3
+                                    ? "/agent-dashboard"
+                                    : "/dashboard";
+                        }}
+                    >
+                        Back
+                    </button>
+
+                </div>
+
+            </div>
+        );
+    };
 
 // =====================================================
 // PROTECTED ROUTE
 // =====================================================
 
-const ProtectedRoute = ({
-  user,
-  allowedRoles,
-  children,
-}) => {
-  if (!user) {
-    return (
-      <Navigate
-        to="/"
-        replace
-      />
-    );
-  }
+const ProtectedRoute =
+    ({
+        user,
+        allowedRoles,
+        children,
+    }) => {
 
-  const roleId = Number(
-    user.id_role ??
-      user.role_id
-  );
+        if (!user) {
+            return (
+                <Navigate
+                    to="/"
+                    replace
+                />
+            );
+        }
 
-  if (
-    allowedRoles &&
-    !allowedRoles.includes(
-      roleId
-    )
-  ) {
-    return (
-      <Navigate
-        to="/dashboard"
-        replace
-      />
-    );
-  }
+        const roleId =
+            Number(
+                user.id_role ??
+                    user.role_id
+            );
 
-  return children;
-};
+        if (
+            allowedRoles &&
+            !allowedRoles.includes(
+                roleId
+            )
+        ) {
+            return (
+                <AccessDenied />
+            );
+        }
+
+        return children;
+    };
 
 // =====================================================
 // LOGIN PAGE
 // =====================================================
 
-const LoginPage = ({
-  username,
-  password,
-  setUsername,
-  setPassword,
-  handleLogin,
-  message,
-}) => {
-  return (
-    <div className="login-page">
+const LoginPage =
+    ({
+        username,
+        password,
+        setUsername,
+        setPassword,
+        handleLogin,
+        message,
+    }) => {
 
-      <div className="login-card">
+        return (
+            <div className="login-page">
 
-        <div className="login-icon">
-          SIM
-        </div>
+                <div className="login-card">
 
-        <h1>
-          SIM Management
-        </h1>
+                    <div className="login-icon">
+                        SIM
+                    </div>
 
-        <p className="subtitle">
-          SIM Registration System
-        </p>
+                    <h1>
+                        SIM Management
+                    </h1>
 
-        <form
-          onSubmit={
-            handleLogin
-          }
-        >
+                    <p className="subtitle">
+                        SIM Registration System
+                    </p>
 
-          <label>
-            Username
-          </label>
+                    <form
+                        onSubmit={
+                            handleLogin
+                        }
+                    >
 
-          <input
-            type="text"
-            value={
-              username
-            }
-            placeholder="Enter username"
-            onChange={(e) =>
-              setUsername(
-                e.target.value
-              )
-            }
-            required
-          />
+                        <label>
+                            Username
+                        </label>
 
-          <label>
-            Password
-          </label>
+                        <input
+                            type="text"
+                            value={
+                                username
+                            }
+                            placeholder="Enter username"
+                            autoComplete="username"
+                            onChange={(
+                                e
+                            ) =>
+                                setUsername(
+                                    e.target.value
+                                )
+                            }
+                            required
+                        />
 
-          <input
-            type="password"
-            value={
-              password
-            }
-            placeholder="Enter password"
-            onChange={(e) =>
-              setPassword(
-                e.target.value
-              )
-            }
-            required
-          />
+                        <label>
+                            Password
+                        </label>
 
-          <button
-            type="submit"
-          >
-            Login
-          </button>
+                        <input
+                            type="password"
+                            value={
+                                password
+                            }
+                            placeholder="Enter password"
+                            autoComplete="current-password"
+                            onChange={(
+                                e
+                            ) =>
+                                setPassword(
+                                    e.target.value
+                                )
+                            }
+                            required
+                        />
 
-        </form>
+                        <button
+                            type="submit"
+                        >
+                            Login
+                        </button>
 
-        {message && (
-          <div className="message">
-            {message}
-          </div>
-        )}
+                    </form>
 
-      </div>
+                    {message && (
+                        <div className="message">
+                            {message}
+                        </div>
+                    )}
 
-    </div>
-  );
-};
+                </div>
+
+            </div>
+        );
+    };
 
 // =====================================================
 // APP
 // =====================================================
 
 function App() {
-  const [
-    username,
-    setUsername,
-  ] = useState("");
 
-  const [
-    password,
-    setPassword,
-  ] = useState("");
+    const [
+        username,
+        setUsername,
+    ] = useState("");
 
-  const [
-    message,
-    setMessage,
-  ] = useState("");
+    const [
+        password,
+        setPassword,
+    ] = useState("");
 
-  const [
-    toast,
-    setToast,
-  ] = useState({
-    message: "",
-    type: "success",
-  });
+    const [
+        message,
+        setMessage,
+    ] = useState("");
 
-  // ===================================================
-  // AUTH STATE
-  // ===================================================
+    const [
+        toast,
+        setToast,
+    ] = useState({
+        message: "",
+        type: "success",
+    });
 
-  const [
-    loggedIn,
-    setLoggedIn,
-  ] = useState(() => {
-    try {
-      return Boolean(
-        localStorage.getItem(
-          "access_token"
-        )
-      );
-    } catch {
-      return false;
-    }
-  });
-
-  const [
-    user,
-    setUser,
-  ] = useState(() => {
-    try {
-      const savedUser =
-        localStorage.getItem(
-          "user"
-        );
-
-      return savedUser
-        ? JSON.parse(
-            savedUser
-          )
-        : null;
-    } catch {
-      return null;
-    }
-  });
-
-  // ===================================================
-  // TOAST
-  // ===================================================
-
-  const showToast =
-    useCallback(
-      (
-        toastMessage,
-        type = "success"
-      ) => {
-        setToast({
-          message:
-            toastMessage,
-          type,
-        });
-      },
-      []
-    );
-
-  // ===================================================
-  // CLEAR LOCAL AUTH
-  // ===================================================
-
-  const clearLocalAuth =
-    useCallback(() => {
-      try {
-        localStorage.removeItem(
-          "access_token"
-        );
-
-        localStorage.removeItem(
-          "refresh_token"
-        );
-
-        localStorage.removeItem(
-          "user"
-        );
-      } catch (error) {
-        console.error(
-          "CLEAR AUTH STORAGE ERROR:",
-          error
-        );
-      }
-
-      setLoggedIn(false);
-      setUser(null);
-      setUsername("");
-      setPassword("");
-      setMessage("");
-    }, []);
-
-  // ===================================================
-  // LOGOUT
-  // ===================================================
-
-  const logout =
-    useCallback(
-      async () => {
-        const refreshToken =
-          localStorage.getItem(
-            "refresh_token"
-          );
-
+    const [
+        loggedIn,
+        setLoggedIn,
+    ] = useState(() => {
         try {
-          if (
-            refreshToken
-          ) {
-            await fetch(
-              `${API_URL}/auth/logout`,
-              {
-                method:
-                  "POST",
-
-                headers: {
-                  "Content-Type":
-                    "application/json",
-
-                  Authorization:
-                    localStorage.getItem(
-                      "access_token"
-                    )
-                      ? `Bearer ${localStorage.getItem(
-                          "access_token"
-                        )}`
-                      : "",
-                },
-
-                body:
-                  JSON.stringify({
-                    refresh_token:
-                      refreshToken,
-                  }),
-              }
+            return Boolean(
+                localStorage.getItem(
+                    "access_token"
+                )
             );
-          }
-        } catch (error) {
-          console.error(
-            "LOGOUT API ERROR:",
-            error
-          );
-        } finally {
-          clearLocalAuth();
+        } catch {
+            return false;
         }
-      },
-      [clearLocalAuth]
-    );
+    });
 
-  // ===================================================
-  // AUTO LOGOUT
-  // ===================================================
+    const [
+        user,
+        setUser,
+    ] = useState(() => {
+        try {
+            const savedUser =
+                localStorage.getItem(
+                    "user"
+                );
 
-  const idleTimerRef =
-    useRef(null);
-
-  const warningTimerRef =
-    useRef(null);
-
-  useEffect(() => {
-    if (!loggedIn) {
-      return;
-    }
-
-    const resetIdleTimer =
-      () => {
-        clearTimeout(
-          idleTimerRef.current
-        );
-
-        clearTimeout(
-          warningTimerRef.current
-        );
-
-        warningTimerRef.current =
-          setTimeout(
-            () => {
-              showToast(
-                "You will be logged out after 2 minutes of inactivity.",
-                "warning"
-              );
-            },
-            WARNING_TIME
-          );
-
-        idleTimerRef.current =
-          setTimeout(
-            () => {
-              clearLocalAuth();
-
-              showToast(
-                "You have been logged out due to inactivity.",
-                "warning"
-              );
-            },
-            IDLE_TIME
-          );
-      };
-
-    const events = [
-      "mousemove",
-      "mousedown",
-      "keydown",
-      "scroll",
-      "touchstart",
-      "click",
-    ];
-
-    events.forEach(
-      (event) => {
-        window.addEventListener(
-          event,
-          resetIdleTimer
-        );
-      }
-    );
-
-    resetIdleTimer();
-
-    return () => {
-      clearTimeout(
-        idleTimerRef.current
-      );
-
-      clearTimeout(
-        warningTimerRef.current
-      );
-
-      events.forEach(
-        (event) => {
-          window.removeEventListener(
-            event,
-            resetIdleTimer
-          );
+            return savedUser
+                ? JSON.parse(
+                    savedUser
+                )
+                : null;
+        } catch {
+            return null;
         }
-      );
-    };
-  }, [
-    loggedIn,
-    clearLocalAuth,
-    showToast,
-  ]);
+    });
 
-  // ===================================================
-  // LOGIN
-  // ===================================================
+    // =================================================
+    // TOAST
+    // =================================================
 
-  const handleLogin =
-    async (event) => {
-      event.preventDefault();
+    const showToast =
+        useCallback(
+            (
+                toastMessage,
+                type = "success"
+            ) => {
+                setToast({
+                    message:
+                        toastMessage,
+                    type,
+                });
+            },
+            []
+        );
 
-      setMessage("");
+    // =================================================
+    // CLEAR AUTH
+    // =================================================
 
-      try {
-        const response =
-          await fetch(
-            `${API_URL}/auth/login`,
-            {
-              method:
-                "POST",
+    const clearLocalAuth =
+        useCallback(
+            () => {
+                localStorage.removeItem(
+                    "access_token"
+                );
 
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
+                localStorage.removeItem(
+                    "refresh_token"
+                );
 
-              body:
-                JSON.stringify({
-                  username:
-                    username.trim(),
+                localStorage.removeItem(
+                    "user"
+                );
 
-                  password,
-                }),
+                setLoggedIn(
+                    false
+                );
+
+                setUser(
+                    null
+                );
+
+                setUsername(
+                    ""
+                );
+
+                setPassword(
+                    ""
+                );
+
+                setMessage(
+                    ""
+                );
+            },
+            []
+        );
+
+    // =================================================
+    // LOGOUT
+    // =================================================
+
+    const logout =
+        useCallback(
+            async () => {
+
+                const refreshToken =
+                    localStorage.getItem(
+                        "refresh_token"
+                    );
+
+                try {
+
+                    if (
+                        refreshToken
+                    ) {
+
+                        await fetch(
+                            `${API_URL}/auth/logout`,
+                            {
+                                method:
+                                    "POST",
+
+                                headers: {
+                                    "Content-Type":
+                                        "application/json",
+
+                                    Authorization:
+                                        localStorage.getItem(
+                                            "access_token"
+                                        )
+                                            ? `Bearer ${localStorage.getItem(
+                                                "access_token"
+                                            )}`
+                                            : "",
+                                },
+
+                                body:
+                                    JSON.stringify(
+                                        {
+                                            refresh_token:
+                                                refreshToken,
+                                        }
+                                    ),
+                            }
+                        );
+                    }
+
+                } catch (
+                    error
+                ) {
+
+                    console.error(
+                        "LOGOUT API ERROR:",
+                        error
+                    );
+
+                } finally {
+
+                    clearLocalAuth();
+
+                }
+            },
+            [
+                clearLocalAuth,
+            ]
+        );
+
+    // =================================================
+    // AUTO LOGOUT
+    // =================================================
+
+    const idleTimerRef =
+        useRef(null);
+
+    const warningTimerRef =
+        useRef(null);
+
+    useEffect(
+        () => {
+
+            if (
+                !loggedIn
+            ) {
+                return;
             }
-          );
 
-        const data =
-          await response.json();
+            const resetIdleTimer =
+                () => {
 
-        if (!response.ok) {
-          setMessage(
-            data.message ||
-              "Login failed"
-          );
+                    clearTimeout(
+                        idleTimerRef.current
+                    );
 
-          return;
-        }
+                    clearTimeout(
+                        warningTimerRef.current
+                    );
 
-        const accessToken =
-          data?.data
-            ?.access_token;
+                    warningTimerRef.current =
+                        setTimeout(
+                            () => {
+                                showToast(
+                                    "You will be logged out after 2 minutes of inactivity.",
+                                    "warning"
+                                );
+                            },
+                            WARNING_TIME
+                        );
 
-        const refreshToken =
-          data?.data
-            ?.refresh_token;
+                    idleTimerRef.current =
+                        setTimeout(
+                            () => {
 
-        const userData =
-          data?.data?.user;
+                                clearLocalAuth();
 
-        if (
-          !accessToken ||
-          !userData
-        ) {
-          setMessage(
-            "Invalid login response from server"
-          );
+                                showToast(
+                                    "You have been logged out due to inactivity.",
+                                    "warning"
+                                );
 
-          return;
-        }
+                            },
+                            IDLE_TIME
+                        );
+                };
 
-        localStorage.setItem(
-          "access_token",
-          accessToken
-        );
+            const events = [
+                "mousemove",
+                "mousedown",
+                "keydown",
+                "scroll",
+                "touchstart",
+                "click",
+            ];
 
-        if (
-          refreshToken
-        ) {
-          localStorage.setItem(
-            "refresh_token",
-            refreshToken
-          );
-        }
-
-        localStorage.setItem(
-          "user",
-          JSON.stringify(
-            userData
-          )
-        );
-
-        setUser(
-          userData
-        );
-
-        setLoggedIn(
-          true
-        );
-
-        setUsername("");
-        setPassword("");
-        setMessage("");
-
-        showToast(
-          "Login successful",
-          "success"
-        );
-      } catch (error) {
-        console.error(
-          "LOGIN ERROR:",
-          error
-        );
-
-        setMessage(
-          error?.message ||
-            "Cannot connect to API."
-        );
-      }
-    };
-
-  // ===================================================
-  // RENDER
-  // ===================================================
-
-  return (
-    <BrowserRouter>
-
-      <Toast
-        message={
-          toast.message
-        }
-        type={
-          toast.type
-        }
-        onClose={() =>
-          setToast({
-            message: "",
-            type: "success",
-          })
-        }
-      />
-
-      <Routes>
-
-        {/* =================================================
-            PUBLIC CUSTOMER REGISTRATION
-        ================================================= */}
-
-        <Route
-          path="/customer-registration/:agentToken"
-          element={
-            <CustomerLayout>
-              <CustomerRegistration />
-            </CustomerLayout>
-          }
-        />
-
-        {/* =================================================
-            LOGIN
-        ================================================= */}
-
-        <Route
-          path="/"
-          element={
-            loggedIn ? (
-              <Navigate
-                to="/dashboard"
-                replace
-              />
-            ) : (
-              <LoginPage
-                username={
-                  username
+            events.forEach(
+                (
+                    event
+                ) => {
+                    window.addEventListener(
+                        event,
+                        resetIdleTimer
+                    );
                 }
-                password={
-                  password
+            );
+
+            resetIdleTimer();
+
+            return () => {
+
+                clearTimeout(
+                    idleTimerRef.current
+                );
+
+                clearTimeout(
+                    warningTimerRef.current
+                );
+
+                events.forEach(
+                    (
+                        event
+                    ) => {
+                        window.removeEventListener(
+                            event,
+                            resetIdleTimer
+                        );
+                    }
+                );
+
+            };
+
+        },
+        [
+            loggedIn,
+            clearLocalAuth,
+            showToast,
+        ]
+    );
+
+    // =================================================
+    // LOGIN
+    // =================================================
+
+    const handleLogin =
+        async (
+            event
+        ) => {
+
+            event.preventDefault();
+
+            setMessage(
+                ""
+            );
+
+            try {
+
+                const response =
+                    await fetch(
+                        `${API_URL}/auth/login`,
+                        {
+                            method:
+                                "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json",
+                            },
+
+                            body:
+                                JSON.stringify(
+                                    {
+                                        username:
+                                            username.trim(),
+
+                                        password,
+                                    }
+                                ),
+                        }
+                    );
+
+                const data =
+                    await response
+                        .json()
+                        .catch(
+                            () => ({})
+                        );
+
+                if (
+                    !response.ok
+                ) {
+
+                    setMessage(
+                        data.message ||
+                            "Login failed"
+                    );
+
+                    return;
                 }
-                setUsername={
-                  setUsername
+
+                const accessToken =
+                    data?.data
+                        ?.access_token;
+
+                const refreshToken =
+                    data?.data
+                        ?.refresh_token;
+
+                const userData =
+                    data?.data
+                        ?.user;
+
+                if (
+                    !accessToken ||
+                    !userData
+                ) {
+
+                    setMessage(
+                        "Invalid login response from server"
+                    );
+
+                    return;
                 }
-                setPassword={
-                  setPassword
+
+                localStorage.setItem(
+                    "access_token",
+                    accessToken
+                );
+
+                if (
+                    refreshToken
+                ) {
+
+                    localStorage.setItem(
+                        "refresh_token",
+                        refreshToken
+                    );
                 }
-                handleLogin={
-                  handleLogin
-                }
+
+                localStorage.setItem(
+                    "user",
+                    JSON.stringify(
+                        userData
+                    )
+                );
+
+                setUser(
+                    userData
+                );
+
+                setLoggedIn(
+                    true
+                );
+
+                setUsername(
+                    ""
+                );
+
+                setPassword(
+                    ""
+                );
+
+                setMessage(
+                    ""
+                );
+
+                const roleId =
+                    Number(
+                        userData.id_role ??
+                            userData.role_id
+                    );
+
+                showToast(
+                    "Login successful",
+                    "success"
+                );
+
+                window.location.href =
+                    roleId === 3
+                        ? "/agent-dashboard"
+                        : "/dashboard";
+
+            } catch (
+                error
+            ) {
+
+                console.error(
+                    "LOGIN ERROR:",
+                    error
+                );
+
+                setMessage(
+                    error.message ||
+                        "Cannot connect to API."
+                );
+            }
+        };
+
+    // =================================================
+    // ROUTES
+    // =================================================
+
+    return (
+        <BrowserRouter>
+
+            <Toast
                 message={
-                  message
+                    toast.message
                 }
-              />
-            )
-          }
-        />
-
-        {/* =================================================
-            DASHBOARD
-        ================================================= */}
-
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute
-              user={user}
-              allowedRoles={[
-                1,
-                2,
-                3,
-              ]}
-            >
-              <AdminLayout
-                user={user}
-                onLogout={
-                  logout
+                type={
+                    toast.type
                 }
-              >
-                <Dashboard
-                  showToast={
-                    showToast
-                  }
-                />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        {/* =================================================
-            REGISTRATIONS
-        ================================================= */}
-
-        <Route
-          path="/registrations"
-          element={
-            <ProtectedRoute
-              user={user}
-              allowedRoles={[
-                1,
-                2,
-                3,
-              ]}
-            >
-              <AdminLayout
-                user={user}
-                onLogout={
-                  logout
+                onClose={() =>
+                    setToast({
+                        message:
+                            "",
+                        type:
+                            "success",
+                    })
                 }
-              >
-                <Registrations
-                  showToast={
-                    showToast
-                  }
-                />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        {/* =================================================
-            SIM CENTER
-        ================================================= */}
-
-        <Route
-          path="/sim-center"
-          element={
-            <ProtectedRoute
-              user={user}
-              allowedRoles={[
-                1,
-                2,
-              ]}
-            >
-              <AdminLayout
-                user={user}
-                onLogout={
-                  logout
-                }
-              >
-                <SimCenter />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        {/* =================================================
-            PEOPLE & ACCESS
-        ================================================= */}
-
-        <Route
-          path="/management"
-          element={
-            <ProtectedRoute
-              user={user}
-              allowedRoles={[
-                1,
-                2,
-                3,
-              ]}
-            >
-              <AdminLayout
-                user={user}
-                onLogout={
-                  logout
-                }
-              >
-                <Management />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        {/* =================================================
-            REPORTS
-        ================================================= */}
-
-        <Route
-          path="/reports"
-          element={
-            <ProtectedRoute
-              user={user}
-              allowedRoles={[
-                1,
-                2,
-              ]}
-            >
-              <AdminLayout
-                user={user}
-                onLogout={
-                  logout
-                }
-              >
-                <Reports
-                  showToast={
-                    showToast
-                  }
-                />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        {/* =================================================
-            SETTINGS
-        ================================================= */}
-
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute
-              user={user}
-              allowedRoles={[
-                1,
-                2,
-                3,
-              ]}
-            >
-              <AdminLayout
-                user={user}
-                onLogout={
-                  logout
-                }
-              >
-                <AdminSettings />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        {/* =================================================
-            FALLBACK
-        ================================================= */}
-
-        <Route
-          path="*"
-          element={
-            <Navigate
-              to={
-                loggedIn
-                  ? "/dashboard"
-                  : "/"
-              }
-              replace
             />
-          }
-        />
 
-      </Routes>
+            <Routes>
 
-    </BrowserRouter>
-  );
+                {/* PUBLIC CUSTOMER */}
+
+                <Route
+                    path="/customer-registration/:agentToken"
+                    element={
+                        <CustomerLayout>
+                            <CustomerRegistration />
+                        </CustomerLayout>
+                    }
+                />
+
+                {/* LOGIN */}
+
+                <Route
+                    path="/"
+                    element={
+                        loggedIn ? (
+                            <Navigate
+                                to={
+                                    Number(
+                                        user?.id_role ??
+                                            user?.role_id
+                                    ) === 3
+                                        ? "/agent-dashboard"
+                                        : "/dashboard"
+                                }
+                                replace
+                            />
+                        ) : (
+                            <LoginPage
+                                username={
+                                    username
+                                }
+                                password={
+                                    password
+                                }
+                                setUsername={
+                                    setUsername
+                                }
+                                setPassword={
+                                    setPassword
+                                }
+                                handleLogin={
+                                    handleLogin
+                                }
+                                message={
+                                    message
+                                }
+                            />
+                        )
+                    }
+                />
+
+                {/* ADMIN DASHBOARD */}
+
+                <Route
+                    path="/dashboard"
+                    element={
+                        <ProtectedRoute
+                            user={
+                                user
+                            }
+                            allowedRoles={[
+                                1,
+                                2,
+                            ]}
+                        >
+                            <AdminLayout
+                                user={
+                                    user
+                                }
+                                onLogout={
+                                    logout
+                                }
+                            >
+                                <Dashboard
+                                    showToast={
+                                        showToast
+                                    }
+                                />
+                            </AdminLayout>
+                        </ProtectedRoute>
+                    }
+                />
+
+                {/* AGENT DASHBOARD */}
+
+                <Route
+                    path="/agent-dashboard"
+                    element={
+                        <ProtectedRoute
+                            user={
+                                user
+                            }
+                            allowedRoles={[
+                                3,
+                            ]}
+                        >
+                            <AdminLayout
+                                user={
+                                    user
+                                }
+                                onLogout={
+                                    logout
+                                }
+                            >
+                                <AgentDashboard />
+                            </AdminLayout>
+                        </ProtectedRoute>
+                    }
+                />
+
+                {/* REGISTRATIONS */}
+
+                <Route
+                    path="/registrations"
+                    element={
+                        <ProtectedRoute
+                            user={
+                                user
+                            }
+                            allowedRoles={[
+                                1,
+                                2,
+                            ]}
+                        >
+                            <AdminLayout
+                                user={
+                                    user
+                                }
+                                onLogout={
+                                    logout
+                                }
+                            >
+                                <Registrations
+                                    showToast={
+                                        showToast
+                                    }
+                                />
+                            </AdminLayout>
+                        </ProtectedRoute>
+                    }
+                />
+
+                {/* SIM CENTER */}
+
+                <Route
+                    path="/sim-center"
+                    element={
+                        <ProtectedRoute
+                            user={
+                                user
+                            }
+                            allowedRoles={[
+                                1,
+                                2,
+                            ]}
+                        >
+                            <AdminLayout
+                                user={
+                                    user
+                                }
+                                onLogout={
+                                    logout
+                                }
+                            >
+                                <SimCenter />
+                            </AdminLayout>
+                        </ProtectedRoute>
+                    }
+                />
+
+                {/* PEOPLE */}
+
+                <Route
+                    path="/management"
+                    element={
+                        <ProtectedRoute
+                            user={
+                                user
+                            }
+                            allowedRoles={[
+                                1,
+                                2,
+                            ]}
+                        >
+                            <AdminLayout
+                                user={
+                                    user
+                                }
+                                onLogout={
+                                    logout
+                                }
+                            >
+                                <Management />
+                            </AdminLayout>
+                        </ProtectedRoute>
+                    }
+                />
+
+                {/* REPORTS */}
+
+                <Route
+                    path="/reports"
+                    element={
+                        <ProtectedRoute
+                            user={
+                                user
+                            }
+                            allowedRoles={[
+                                1,
+                                2,
+                            ]}
+                        >
+                            <AdminLayout
+                                user={
+                                    user
+                                }
+                                onLogout={
+                                    logout
+                                }
+                            >
+                                <Reports
+                                    showToast={
+                                        showToast
+                                    }
+                                />
+                            </AdminLayout>
+                        </ProtectedRoute>
+                    }
+                />
+
+                {/* SETTINGS */}
+
+                <Route
+                    path="/settings"
+                    element={
+                        <ProtectedRoute
+                            user={
+                                user
+                            }
+                            allowedRoles={[
+                                1,
+                                2,
+                                3,
+                            ]}
+                        >
+                            <AdminLayout
+                                user={
+                                    user
+                                }
+                                onLogout={
+                                    logout
+                                }
+                            >
+                                <AdminSettings />
+                            </AdminLayout>
+                        </ProtectedRoute>
+                    }
+                />
+
+                {/* FALLBACK */}
+
+                <Route
+                    path="*"
+                    element={
+                        <Navigate
+                            to={
+                                loggedIn
+                                    ? (
+                                        Number(
+                                            user?.id_role ??
+                                                user?.role_id
+                                        ) === 3
+                                            ? "/agent-dashboard"
+                                            : "/dashboard"
+                                    )
+                                    : "/"
+                            }
+                            replace
+                        />
+                    }
+                />
+
+            </Routes>
+
+        </BrowserRouter>
+    );
 }
 
 export default App;

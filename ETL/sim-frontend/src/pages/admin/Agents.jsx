@@ -1,1035 +1,1799 @@
 import {
-  useCallback,
-  useEffect,
-  useState,
+    useCallback,
+    useEffect,
+    useState,
 } from "react";
 
 import { apiFetch } from "../../api";
 
-function Agents() {
-  const [
-    agents,
-    setAgents,
-  ] = useState([]);
-
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
-
-  const [
-    error,
-    setError,
-  ] = useState("");
-
-  const [
-    search,
-    setSearch,
-  ] = useState("");
-
-  const [
-    currentPage,
-    setCurrentPage,
-  ] = useState(1);
-
-  const [
-    pageSize,
-    setPageSize,
-  ] = useState(10);
-
-  const [
-    showModal,
-    setShowModal,
-  ] = useState(false);
-
-  const [
-    editingAgent,
-    setEditingAgent,
-  ] = useState(null);
-
-  const [
-    copiedId,
-    setCopiedId,
-  ] = useState(null);
-
-  const [
-    form,
-    setForm,
-  ] = useState({
+const initialAgentForm = {
     agent_name: "",
     contact_phone: "",
     contact_email: "",
     address: "",
-  });
+    login_username: "",
+    login_password: "",
+};
 
-  // ===================================================
-  // CURRENT USER
-  // ===================================================
+const initialAccountForm = {
+    login_username: "",
+    login_password: "",
+};
 
-  const currentUser =
-    (() => {
-      try {
-        return JSON.parse(
-          localStorage.getItem(
-            "user"
-          ) || "null"
-        );
-      } catch {
-        return null;
-      }
-    })();
+function Agents() {
 
-  // ===================================================
-  // LOAD AGENTS
-  // ===================================================
+    const [
+        agents,
+        setAgents,
+    ] = useState([]);
 
-  const loadAgents =
-    useCallback(async () => {
-      try {
-        setLoading(true);
-        setError("");
+    const [
+        loading,
+        setLoading,
+    ] = useState(true);
 
-        const response =
-          await apiFetch(
-            "/agents"
-          );
+    const [
+        error,
+        setError,
+    ] = useState("");
 
-        setAgents(
-          response.data || []
-        );
-      } catch (err) {
-        console.error(
-          "GET AGENTS ERROR:",
-          err
-        );
+    const [
+        feedback,
+        setFeedback,
+    ] = useState({
+        type: "",
+        message: "",
+    });
 
-        setError(
-          err.message ||
-            "Failed to load agents"
-        );
-      } finally {
-        setLoading(false);
-      }
-    }, []);
+    const [
+        search,
+        setSearch,
+    ] = useState("");
 
-  useEffect(() => {
-    loadAgents();
-  }, [loadAgents]);
+    const [
+        showModal,
+        setShowModal,
+    ] = useState(false);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search]);
+    const [
+        showAccountModal,
+        setShowAccountModal,
+    ] = useState(false);
 
-  // ===================================================
-  // FORM CHANGE
-  // ===================================================
+    const [
+        editingAgent,
+        setEditingAgent,
+    ] = useState(null);
 
-  const handleChange =
-    (event) => {
-      const {
-        name,
-        value,
-      } = event.target;
+    const [
+        accountAgent,
+        setAccountAgent,
+    ] = useState(null);
 
-      setForm(
-        (prev) => ({
-          ...prev,
-          [name]:
-            value,
-        })
-      );
-    };
-
-  // ===================================================
-  // ADD
-  // ===================================================
-
-  const openAddModal =
-    () => {
-      setEditingAgent(
-        null
-      );
-
-      setForm({
-        agent_name: "",
-        contact_phone: "",
-        contact_email: "",
-        address: "",
-      });
-
-      setShowModal(
-        true
-      );
-    };
-
-  // ===================================================
-  // EDIT
-  // ===================================================
-
-  const openEditModal =
-    (agent) => {
-      setEditingAgent(
-        agent
-      );
-
-      setForm({
-        agent_name:
-          agent.agent_name ||
-          "",
-
-        contact_phone:
-          agent.contact_phone ||
-          "",
-
-        contact_email:
-          agent.contact_email ||
-          "",
-
-        address:
-          agent.address ||
-          "",
-      });
-
-      setShowModal(
-        true
-      );
-    };
-
-  // ===================================================
-  // CLOSE
-  // ===================================================
-
-  const closeModal =
-    () => {
-      setShowModal(
-        false
-      );
-
-      setEditingAgent(
-        null
-      );
-    };
-
-  // ===================================================
-  // SAVE
-  // ===================================================
-
-  const handleSubmit =
-    async (event) => {
-      event.preventDefault();
-
-      try {
-        if (
-          !form.agent_name.trim()
-        ) {
-          alert(
-            "Agent name is required"
-          );
-
-          return;
-        }
-
-        const payload =
-          {
-            agent_name:
-              form.agent_name.trim(),
-
-            contact_phone:
-              form.contact_phone.trim() ||
-              null,
-
-            contact_email:
-              form.contact_email.trim() ||
-              null,
-
-            address:
-              form.address.trim() ||
-              null,
-          };
-
-        if (
-          editingAgent
-        ) {
-          await apiFetch(
-            `/agents/${editingAgent.id_agent}`,
-            {
-              method:
-                "PUT",
-
-              body:
-                JSON.stringify(
-                  payload
-                ),
-            }
-          );
-
-          alert(
-            "Agent updated successfully"
-          );
-        } else {
-          await apiFetch(
-            "/agents",
-            {
-              method:
-                "POST",
-
-              body:
-                JSON.stringify({
-                  ...payload,
-
-                  created_by:
-                    currentUser?.id_user ||
-                    null,
-                }),
-            }
-          );
-
-          alert(
-            "Agent created successfully"
-          );
-        }
-
-        closeModal();
-
-        await loadAgents();
-      } catch (err) {
-        console.error(
-          "SAVE AGENT ERROR:",
-          err
-        );
-
-        alert(
-          err.message ||
-            "Failed to save agent"
-        );
-      }
-    };
-
-  // ===================================================
-  // DELETE
-  // ===================================================
-
-  const handleDelete =
-    async (id) => {
-      const confirmed =
-        window.confirm(
-          "Are you sure you want to delete this agent?"
-        );
-
-      if (!confirmed) {
-        return;
-      }
-
-      try {
-        await apiFetch(
-          `/agents/${id}`,
-          {
-            method:
-              "DELETE",
-          }
-        );
-
-        alert(
-          "Agent deleted successfully"
-        );
-
-        await loadAgents();
-      } catch (err) {
-        console.error(
-          "DELETE AGENT ERROR:",
-          err
-        );
-
-        alert(
-          err.message ||
-            "Failed to delete agent"
-        );
-      }
-    };
-
-  // ===================================================
-  // COPY PUBLIC LINK
-  // ===================================================
-
-  const copyPublicLink =
-    async (
-      agent
-    ) => {
-      if (
-        !agent.public_url
-      ) {
-        return;
-      }
-
-      try {
-        await navigator.clipboard.writeText(
-          agent.public_url
-        );
-
-        setCopiedId(
-          agent.id_agent
-        );
-
-        setTimeout(
-          () =>
-            setCopiedId(
-              null
-            ),
-          1500
-        );
-      } catch (error) {
-        console.error(
-          "COPY LINK ERROR:",
-          error
-        );
-
-        window.prompt(
-          "Copy this Agent registration link:",
-          agent.public_url
-        );
-      }
-    };
-
-  // ===================================================
-  // FILTER
-  // ===================================================
-
-  const filteredAgents =
-    agents.filter(
-      (agent) => {
-        const keyword =
-          search
-            .toLowerCase()
-            .trim();
-
-        return (
-          agent.agent_name
-            ?.toLowerCase()
-            .includes(
-              keyword
-            ) ||
-          agent.contact_phone
-            ?.toLowerCase()
-            .includes(
-              keyword
-            ) ||
-          agent.contact_email
-            ?.toLowerCase()
-            .includes(
-              keyword
-            ) ||
-          agent.address
-            ?.toLowerCase()
-            .includes(
-              keyword
-            )
-        );
-      }
+    const [
+        form,
+        setForm,
+    ] = useState(
+        initialAgentForm
     );
 
-  // ===================================================
-  // PAGINATION
-  // ===================================================
-
-  const totalPages =
-    Math.max(
-      1,
-      Math.ceil(
-        filteredAgents.length /
-          pageSize
-      )
+    const [
+        accountForm,
+        setAccountForm,
+    ] = useState(
+        initialAccountForm
     );
 
-  const startIndex =
-    (currentPage - 1) *
-    pageSize;
+    const [
+        saving,
+        setSaving,
+    ] = useState(false);
 
-  const paginatedAgents =
-    filteredAgents.slice(
-      startIndex,
-      startIndex +
-        pageSize
-    );
+    const [
+        accountSaving,
+        setAccountSaving,
+    ] = useState(false);
 
-  // ===================================================
-  // RENDER
-  // ===================================================
+    const [
+        copiedId,
+        setCopiedId,
+    ] = useState(null);
 
-  return (
-    <div className="page-container">
+    const [
+        linkActionId,
+        setLinkActionId,
+    ] = useState(null);
 
-      {/* HEADER */}
+    // =================================================
+    // LOAD AGENTS
+    // =================================================
 
-      <div className="page-header">
+    const loadAgents =
+        useCallback(
+            async () => {
+                try {
+                    setLoading(true);
+                    setError("");
 
-        <div>
-          <h1>
-            Agent Management
-          </h1>
+                    const response =
+                        await apiFetch(
+                            "/agents"
+                        );
 
-          <p>
-            Manage SIM agents and distributors
-          </p>
-        </div>
+                    setAgents(
+                        response.data ||
+                            []
+                    );
+                } catch (err) {
+                    console.error(
+                        "GET AGENTS ERROR:",
+                        err
+                    );
 
-        <button
-          className="primary-button"
-          onClick={
-            openAddModal
-          }
-        >
-          + Add Agent
-        </button>
+                    setError(
+                        err.message ||
+                            "Failed to load agents."
+                    );
+                } finally {
+                    setLoading(false);
+                }
+            },
+            []
+        );
 
-      </div>
+    useEffect(() => {
+        loadAgents();
+    }, [
+        loadAgents,
+    ]);
 
-      {/* SEARCH */}
+    // =================================================
+    // FEEDBACK
+    // =================================================
 
-      <div className="panel agent-toolbar">
+    const showFeedback =
+        (
+            type,
+            message
+        ) => {
+            setFeedback({
+                type,
+                message,
+            });
+        };
 
-        <input
-          type="text"
-          className="search-input"
-          placeholder="Search agent..."
-          value={
-            search
-          }
-          onChange={(event) =>
-            setSearch(
-              event.target.value
-            )
-          }
-        />
+    // =================================================
+    // ADD
+    // =================================================
 
-        <div className="agent-count">
-          Total:{" "}
-          <strong>
-            {
-              filteredAgents.length
+    const openAddModal =
+        () => {
+            setEditingAgent(
+                null
+            );
+
+            setForm({
+                ...initialAgentForm,
+            });
+
+            setFeedback({
+                type: "",
+                message: "",
+            });
+
+            setShowModal(
+                true
+            );
+        };
+
+    // =================================================
+    // EDIT
+    // =================================================
+
+    const openEditModal =
+        (
+            agent
+        ) => {
+            setEditingAgent(
+                agent
+            );
+
+            setForm({
+                agent_name:
+                    agent.agent_name ||
+                    "",
+
+                contact_phone:
+                    agent.contact_phone ||
+                    "",
+
+                contact_email:
+                    agent.contact_email ||
+                    "",
+
+                address:
+                    agent.address ||
+                    "",
+
+                login_username:
+                    agent.login_username ||
+                    "",
+
+                login_password:
+                    "",
+            });
+
+            setFeedback({
+                type: "",
+                message: "",
+            });
+
+            setShowModal(
+                true
+            );
+        };
+
+    // =================================================
+    // CLOSE
+    // =================================================
+
+    const closeModal =
+        () => {
+            if (
+                saving
+            ) {
+                return;
             }
-          </strong>
-        </div>
 
-      </div>
+            setShowModal(
+                false
+            );
 
-      {error && (
-        <div className="dashboard-error">
-          {error}
-        </div>
-      )}
+            setEditingAgent(
+                null
+            );
 
-      {/* TABLE */}
+            setForm({
+                ...initialAgentForm,
+            });
+        };
 
-      <div className="panel">
+    // =================================================
+    // CREATE LOGIN MODAL
+    // =================================================
 
-        {loading ? (
-          <div className="loading-box">
-            Loading agents...
-          </div>
-        ) : (
-          <div className="table-wrapper">
+    const openAccountModal =
+        (
+            agent
+        ) => {
+            setAccountAgent(
+                agent
+            );
 
-            <table className="agent-table">
-
-              <thead>
-
-                <tr>
-                  <th>ID</th>
-                  <th>Agent Name</th>
-                  <th>Phone</th>
-                  <th>Email</th>
-                  <th>Address</th>
-                  <th>Created By</th>
-                  <th>Actions</th>
-                  <th>Public Link</th>
-                  <th>Registrations</th>
-                </tr>
-
-              </thead>
-
-              <tbody>
-
-                {paginatedAgents.length ===
-                0 ? (
-                  <tr>
-                    <td
-                      colSpan="9"
-                      className="empty-row"
-                    >
-                      No agents found
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedAgents.map(
-                    (agent) => (
-                      <tr
-                        key={
-                          agent.id_agent
-                        }
-                      >
-
-                        <td>
-                          #
-                          {
-                            agent.id_agent
-                          }
-                        </td>
-
-                        <td>
-
-                          <div className="agent-name-cell">
-
-                            <div className="agent-avatar">
-
-                              {(
-                                agent.agent_name ||
-                                "A"
-                              )
-                                .charAt(
-                                  0
-                                )
-                                .toUpperCase()}
-
-                            </div>
-
-                            <strong>
-                              {
-                                agent.agent_name
-                              }
-                            </strong>
-
-                          </div>
-
-                        </td>
-
-                        <td>
-                          {
-                            agent.contact_phone ||
-                            "-"
-                          }
-                        </td>
-
-                        <td>
-                          {
-                            agent.contact_email ||
-                            "-"
-                          }
-                        </td>
-
-                        <td>
-                          {
-                            agent.address ||
-                            "-"
-                          }
-                        </td>
-
-                        <td>
-                          {
-                            agent.created_by_username ||
-                            "-"
-                          }
-                        </td>
-
-                        <td>
-
-                          <div className="action-buttons">
-
-                            <button
-                              className="edit-button"
-                              onClick={() =>
-                                openEditModal(
-                                  agent
-                                )
-                              }
-                            >
-                              Edit
-                            </button>
-
-                            <button
-                              className="delete-button"
-                              onClick={() =>
-                                handleDelete(
-                                  agent.id_agent
-                                )
-                              }
-                            >
-                              Delete
-                            </button>
-
-                          </div>
-
-                        </td>
-
-                        <td>
-
-                          {agent.public_url ? (
-                            <div
-                              style={{
-                                display:
-                                  "flex",
-                                flexDirection:
-                                  "column",
-                                gap:
-                                  "0.4rem",
-                              }}
-                            >
-
-                              <a
-                                href={
-                                  agent.public_url
-                                }
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                Open Link
-                              </a>
-
-                              <button
-                                type="button"
-                                className="secondary-button"
-                                onClick={() =>
-                                  copyPublicLink(
-                                    agent
-                                  )
-                                }
-                              >
-                                {copiedId ===
-                                agent.id_agent
-                                  ? "Copied!"
-                                  : "Copy Link"}
-                              </button>
-
-                            </div>
-                          ) : (
-                            "-"
-                          )}
-
-                        </td>
-
-                        <td>
-
-                          <div>
-                            Total:{" "}
-                            <strong>
-                              {
-                                agent.total_registrations ||
-                                0
-                              }
-                            </strong>
-                          </div>
-
-                          <div>
-                            Pending:{" "}
-                            {
-                              agent.pending_registrations ||
-                              0
-                            }
-                          </div>
-
-                          <div>
-                            Approved:{" "}
-                            {
-                              agent.approved_registrations ||
-                              0
-                            }
-                          </div>
-
-                          <div>
-                            Rejected:{" "}
-                            {
-                              agent.rejected_registrations ||
-                              0
-                            }
-                          </div>
-
-                        </td>
-
-                      </tr>
+            setAccountForm({
+                login_username:
+                    agent.login_username ||
+                    `${String(
+                        agent.agent_name ||
+                        "agent"
                     )
-                  )
+                        .toLowerCase()
+                        .replace(
+                            /[^a-z0-9]+/g,
+                            ""
+                        )
+                        .slice(
+                            0,
+                            20
+                        )}01`,
+
+                login_password:
+                    "",
+            });
+
+            setShowAccountModal(
+                true
+            );
+        };
+
+    const closeAccountModal =
+        () => {
+            if (
+                accountSaving
+            ) {
+                return;
+            }
+
+            setShowAccountModal(
+                false
+            );
+
+            setAccountAgent(
+                null
+            );
+
+            setAccountForm({
+                ...initialAccountForm,
+            });
+        };
+
+    // =================================================
+    // FORM CHANGE
+    // =================================================
+
+    const handleChange =
+        (
+            event
+        ) => {
+            const {
+                name,
+                value,
+            } =
+                event.target;
+
+            setForm(
+                (
+                    prev
+                ) => ({
+                    ...prev,
+                    [name]:
+                        value,
+                })
+            );
+        };
+
+    const handleAccountChange =
+        (
+            event
+        ) => {
+            const {
+                name,
+                value,
+            } =
+                event.target;
+
+            setAccountForm(
+                (
+                    prev
+                ) => ({
+                    ...prev,
+                    [name]:
+                        value,
+                })
+            );
+        };
+
+    // =================================================
+    // CREATE / UPDATE AGENT
+    // =================================================
+
+    const handleSubmit =
+        async (
+            event
+        ) => {
+            event.preventDefault();
+
+            if (
+                !form.agent_name.trim()
+            ) {
+                showFeedback(
+                    "error",
+                    "Agent name is required."
+                );
+
+                return;
+            }
+
+            if (
+                !editingAgent &&
+                !form.contact_email.trim()
+            ) {
+                showFeedback(
+                    "error",
+                    "Contact email is required because every Agent needs a login account."
+                );
+
+                return;
+            }
+
+            if (
+                !editingAgent &&
+                !form.login_username.trim()
+            ) {
+                showFeedback(
+                    "error",
+                    "Login username is required."
+                );
+
+                return;
+            }
+
+            if (
+                !editingAgent &&
+                !form.login_password
+            ) {
+                showFeedback(
+                    "error",
+                    "Login password is required."
+                );
+
+                return;
+            }
+
+            try {
+                setSaving(
+                    true
+                );
+
+                setFeedback({
+                    type: "",
+                    message: "",
+                });
+
+                if (
+                    editingAgent
+                ) {
+                    await apiFetch(
+                        `/agents/${editingAgent.id_agent}`,
+                        {
+                            method:
+                                "PUT",
+
+                            body:
+                                JSON.stringify({
+                                    agent_name:
+                                        form.agent_name.trim(),
+
+                                    contact_phone:
+                                        form.contact_phone.trim() ||
+                                        null,
+
+                                    contact_email:
+                                        form.contact_email.trim() ||
+                                        null,
+
+                                    address:
+                                        form.address.trim() ||
+                                        null,
+                                }),
+                        }
+                    );
+
+                    showFeedback(
+                        "success",
+                        "Agent information updated successfully."
+                    );
+                } else {
+                    const response =
+                        await apiFetch(
+                            "/agents",
+                            {
+                                method:
+                                    "POST",
+
+                                body:
+                                    JSON.stringify(
+                                        {
+                                            agent_name:
+                                                form.agent_name.trim(),
+
+                                            contact_phone:
+                                                form.contact_phone.trim() ||
+                                                null,
+
+                                            contact_email:
+                                                form.contact_email.trim(),
+
+                                            address:
+                                                form.address.trim() ||
+                                                null,
+
+                                            login_username:
+                                                form.login_username.trim(),
+
+                                            login_password:
+                                                form.login_password,
+                                        }
+                                    ),
+                            }
+                        );
+
+                    window.alert(
+                        `Agent created successfully.\n\nLogin username: ${
+                            response?.data
+                                ?.login_username ||
+                            form.login_username.trim()
+                        }\n\nGive this username and the password you created to the Agent.`
+                    );
+                }
+
+                closeModal();
+
+                await loadAgents();
+            } catch (
+                err
+            ) {
+                console.error(
+                    "SAVE AGENT ERROR:",
+                    err
+                );
+
+                showFeedback(
+                    "error",
+                    err.message ||
+                        "Failed to save Agent."
+                );
+            } finally {
+                setSaving(
+                    false
+                );
+            }
+        };
+
+    // =================================================
+    // CREATE LOGIN FOR EXISTING AGENT
+    // =================================================
+
+    const createLoginAccount =
+        async (
+            event
+        ) => {
+            event.preventDefault();
+
+            if (
+                !accountAgent
+            ) {
+                return;
+            }
+
+            if (
+                !accountForm.login_username.trim()
+            ) {
+                showFeedback(
+                    "error",
+                    "Login username is required."
+                );
+
+                return;
+            }
+
+            if (
+                !accountForm.login_password
+            ) {
+                showFeedback(
+                    "error",
+                    "Login password is required."
+                );
+
+                return;
+            }
+
+            try {
+                setAccountSaving(
+                    true
+                );
+
+                const response =
+                    await apiFetch(
+                        `/agents/${accountAgent.id_agent}/account`,
+                        {
+                            method:
+                                "POST",
+
+                            body:
+                                JSON.stringify(
+                                    accountForm
+                                ),
+                        }
+                    );
+
+                closeAccountModal();
+
+                await loadAgents();
+
+                window.alert(
+                    `Agent login created.\n\nUsername: ${
+                        response?.data
+                            ?.login_username ||
+                        accountForm.login_username
+                    }\n\nGive the Agent the password you entered.`
+                );
+            } catch (
+                err
+            ) {
+                showFeedback(
+                    "error",
+                    err.message ||
+                        "Failed to create Agent login."
+                );
+            } finally {
+                setAccountSaving(
+                    false
+                );
+            }
+        };
+
+    // =================================================
+    // DELETE
+    // =================================================
+
+    const handleDelete =
+        async (
+            agent
+        ) => {
+            const confirmed =
+                window.confirm(
+                    `Delete "${agent.agent_name}"?\n\nThe Agent profile will be disabled and its login account will also be deactivated.`
+                );
+
+            if (
+                !confirmed
+            ) {
+                return;
+            }
+
+            try {
+                await apiFetch(
+                    `/agents/${agent.id_agent}`,
+                    {
+                        method:
+                            "DELETE",
+                    }
+                );
+
+                showFeedback(
+                    "success",
+                    "Agent deleted and login disabled."
+                );
+
+                await loadAgents();
+            } catch (
+                err
+            ) {
+                showFeedback(
+                    "error",
+                    err.message ||
+                        "Failed to delete Agent."
+                );
+            }
+        };
+
+    // =================================================
+    // COPY
+    // =================================================
+
+    const copyPublicLink =
+        async (
+            agent
+        ) => {
+            if (
+                !agent.public_url
+            ) {
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(
+                    agent.public_url
+                );
+
+                setCopiedId(
+                    agent.id_agent
+                );
+
+                window.setTimeout(
+                    () =>
+                        setCopiedId(
+                            null
+                        ),
+                    1600
+                );
+            } catch {
+                window.prompt(
+                    "Copy this Agent registration link:",
+                    agent.public_url
+                );
+            }
+        };
+
+    // =================================================
+    // SHARE
+    // =================================================
+
+    const sharePublicLink =
+        async (
+            agent
+        ) => {
+            if (
+                !agent.public_url
+            ) {
+                return;
+            }
+
+            const message =
+                `SIM Registration for ${agent.agent_name}\n\n` +
+                `Please open this link to register your SIM:\n` +
+                `${agent.public_url}`;
+
+            try {
+                if (
+                    navigator.share
+                ) {
+                    await navigator.share(
+                        {
+                            title:
+                                "SIM Registration",
+                            text:
+                                message,
+                            url:
+                                agent.public_url,
+                        }
+                    );
+
+                    return;
+                }
+
+                await navigator.clipboard.writeText(
+                    message
+                );
+
+                showFeedback(
+                    "success",
+                    "Sharing is not available in this browser. The message was copied."
+                );
+            } catch (
+                err
+            ) {
+                if (
+                    err?.name !==
+                    "AbortError"
+                ) {
+                    showFeedback(
+                        "error",
+                        "Unable to share the link."
+                    );
+                }
+            }
+        };
+
+    // =================================================
+    // WHATSAPP
+    // =================================================
+
+    const openWhatsApp =
+        (
+            agent
+        ) => {
+            if (
+                !agent.public_url
+            ) {
+                return;
+            }
+
+            const message =
+                `SIM Registration\n\n` +
+                `Please open this link to register your SIM:\n` +
+                `${agent.public_url}`;
+
+            window.open(
+                `https://wa.me/?text=${encodeURIComponent(
+                    message
+                )}`,
+                "_blank",
+                "noopener,noreferrer"
+            );
+        };
+
+    // =================================================
+    // REGENERATE
+    // =================================================
+
+    const regeneratePublicLink =
+        async (
+            agent
+        ) => {
+            const confirmed =
+                window.confirm(
+                    `Regenerate the public registration link for "${agent.agent_name}"?\n\nThe old link will stop working.`
+                );
+
+            if (
+                !confirmed
+            ) {
+                return;
+            }
+
+            try {
+                setLinkActionId(
+                    agent.id_agent
+                );
+
+                const response =
+                    await apiFetch(
+                        `/agents/${agent.id_agent}/public-link`,
+                        {
+                            method:
+                                "POST",
+                        }
+                    );
+
+                await loadAgents();
+
+                showFeedback(
+                    "success",
+                    `New registration link generated for ${agent.agent_name}.`
+                );
+
+                if (
+                    response?.data
+                        ?.public_url
+                ) {
+                    try {
+                        await navigator.clipboard.writeText(
+                            response.data.public_url
+                        );
+                    } catch {}
+                }
+            } catch (
+                err
+            ) {
+                showFeedback(
+                    "error",
+                    err.message ||
+                        "Failed to regenerate link."
+                );
+            } finally {
+                setLinkActionId(
+                    null
+                );
+            }
+        };
+
+    // =================================================
+    // FILTER
+    // =================================================
+
+    const filteredAgents =
+        agents.filter(
+            (
+                agent
+            ) => {
+                const keyword =
+                    search
+                        .toLowerCase()
+                        .trim();
+
+                return (
+                    agent.agent_name
+                        ?.toLowerCase()
+                        .includes(
+                            keyword
+                        ) ||
+
+                    agent.contact_phone
+                        ?.toLowerCase()
+                        .includes(
+                            keyword
+                        ) ||
+
+                    agent.contact_email
+                        ?.toLowerCase()
+                        .includes(
+                            keyword
+                        ) ||
+
+                    agent.login_username
+                        ?.toLowerCase()
+                        .includes(
+                            keyword
+                        )
+                );
+            }
+        );
+
+    // =================================================
+    // RENDER
+    // =================================================
+
+    return (
+        <div className="page-container agents-management-page">
+
+            {/* ==========================================
+                HEADER
+            =========================================== */}
+
+            <div className="page-header">
+
+                <div>
+                    <h1>
+                        Agent Management
+                    </h1>
+
+                    <p>
+                        Create Agent accounts,
+                        manage public registration
+                        links, and monitor
+                        registrations.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    className="primary-button"
+                    onClick={
+                        openAddModal
+                    }
+                >
+                    + Add Agent
+                </button>
+
+            </div>
+
+            {/* ==========================================
+                HELP
+            =========================================== */}
+
+            <div className="agent-help-box">
+
+                <div className="agent-help-icon">
+                    ↗
+                </div>
+
+                <div>
+                    <strong>
+                        Agent workflow
+                    </strong>
+
+                    <p>
+                        Create the Agent
+                        account here. The
+                        Agent logs in with
+                        the username and
+                        password, then copies
+                        or shares the Agent's
+                        stable customer
+                        registration link.
+                        Customers do not need
+                        to log in.
+                    </p>
+                </div>
+
+            </div>
+
+            {/* ==========================================
+                FEEDBACK
+            =========================================== */}
+
+            {feedback.message && (
+                <div
+                    className={`agent-feedback ${feedback.type}`}
+                >
+                    {
+                        feedback.message
+                    }
+                </div>
+            )}
+
+            {error && (
+                <div className="agent-feedback error">
+                    {error}
+                </div>
+            )}
+
+            {/* ==========================================
+                SEARCH
+            =========================================== */}
+
+            <div className="panel agent-toolbar">
+
+                <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Search agent, username or email..."
+                    value={
+                        search
+                    }
+                    onChange={(
+                        event
+                    ) =>
+                        setSearch(
+                            event
+                                .target
+                                .value
+                        )
+                    }
+                />
+
+                <div className="agent-count">
+
+                    Total:{" "}
+
+                    <strong>
+                        {
+                            filteredAgents.length
+                        }
+                    </strong>
+
+                </div>
+
+            </div>
+
+            {/* ==========================================
+                TABLE
+            =========================================== */}
+
+            <div className="panel">
+
+                {loading ? (
+                    <div className="loading-box">
+                        Loading agents...
+                    </div>
+                ) : (
+                    <div className="table-wrapper">
+
+                        <table className="agent-table">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>
+                                        Agent
+                                    </th>
+
+                                    <th>
+                                        Login
+                                    </th>
+
+                                    <th>
+                                        Public Registration Link
+                                    </th>
+
+                                    <th>
+                                        Registrations
+                                    </th>
+
+                                    <th>
+                                        Actions
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+
+                                {filteredAgents.length ===
+                                0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan="5"
+                                            className="empty-row"
+                                        >
+                                            No agents found.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredAgents.map(
+                                        (
+                                            agent
+                                        ) => (
+                                            <tr
+                                                key={
+                                                    agent.id_agent
+                                                }
+                                            >
+
+                                                {/* AGENT */}
+
+                                                <td>
+
+                                                    <div className="agent-name-cell">
+
+                                                        <div className="agent-avatar">
+                                                            {(
+                                                                agent.agent_name ||
+                                                                "A"
+                                                            )
+                                                                .charAt(
+                                                                    0
+                                                                )
+                                                                .toUpperCase()}
+                                                        </div>
+
+                                                        <div>
+
+                                                            <strong>
+                                                                {
+                                                                    agent.agent_name
+                                                                }
+                                                            </strong>
+
+                                                            <div className="muted-text">
+                                                                {
+                                                                    agent.contact_phone ||
+                                                                    "-"
+                                                                }
+                                                            </div>
+
+                                                            <div className="muted-text">
+                                                                {
+                                                                    agent.contact_email ||
+                                                                    "-"
+                                                                }
+                                                            </div>
+
+                                                        </div>
+
+                                                    </div>
+
+                                                </td>
+
+                                                {/* LOGIN */}
+
+                                                <td>
+
+                                                    {Number(
+                                                        agent.has_login_account
+                                                    ) === 1 ? (
+                                                        <>
+                                                            <span className="status-badge status-success">
+                                                                Login Ready
+                                                            </span>
+
+                                                            <div className="muted-text agent-login-username">
+                                                                @
+                                                                {
+                                                                    agent.login_username
+                                                                }
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <span className="status-badge status-danger">
+                                                                No Login
+                                                            </span>
+
+                                                            <button
+                                                                type="button"
+                                                                className="secondary-button agent-small-button"
+                                                                onClick={() =>
+                                                                    openAccountModal(
+                                                                        agent
+                                                                    )
+                                                                }
+                                                            >
+                                                                Create Login
+                                                            </button>
+                                                        </>
+                                                    )}
+
+                                                </td>
+
+                                                {/* PUBLIC LINK */}
+
+                                                <td>
+
+                                                    <div className="agent-link-cell">
+
+                                                        <a
+                                                            className="agent-link-url"
+                                                            href={
+                                                                agent.public_url
+                                                            }
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            title={
+                                                                agent.public_url
+                                                            }
+                                                        >
+                                                            {
+                                                                agent.public_url
+                                                            }
+                                                        </a>
+
+                                                        <div className="agent-link-note">
+                                                            Stable link •
+                                                            changes only
+                                                            when regenerated
+                                                        </div>
+
+                                                        <div className="agent-action-stack">
+
+                                                            <a
+                                                                className="secondary-button agent-small-button"
+                                                                href={
+                                                                    agent.public_url
+                                                                }
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                            >
+                                                                Open
+                                                            </a>
+
+                                                            <button
+                                                                type="button"
+                                                                className="secondary-button agent-small-button"
+                                                                onClick={() =>
+                                                                    copyPublicLink(
+                                                                        agent
+                                                                    )
+                                                                }
+                                                            >
+                                                                {
+                                                                    copiedId ===
+                                                                    agent.id_agent
+                                                                        ? "Copied"
+                                                                        : "Copy"
+                                                                }
+                                                            </button>
+
+                                                            <button
+                                                                type="button"
+                                                                className="secondary-button agent-small-button"
+                                                                onClick={() =>
+                                                                    sharePublicLink(
+                                                                        agent
+                                                                    )
+                                                                }
+                                                            >
+                                                                Share
+                                                            </button>
+
+                                                            <button
+                                                                type="button"
+                                                                className="secondary-button agent-small-button"
+                                                                onClick={() =>
+                                                                    openWhatsApp(
+                                                                        agent
+                                                                    )
+                                                                }
+                                                            >
+                                                                WhatsApp
+                                                            </button>
+
+                                                            <button
+                                                                type="button"
+                                                                className="delete-button agent-small-button"
+                                                                disabled={
+                                                                    linkActionId ===
+                                                                    agent.id_agent
+                                                                }
+                                                                onClick={() =>
+                                                                    regeneratePublicLink(
+                                                                        agent
+                                                                    )
+                                                                }
+                                                            >
+                                                                {
+                                                                    linkActionId ===
+                                                                    agent.id_agent
+                                                                        ? "Regenerating..."
+                                                                        : "Regenerate"
+                                                                }
+                                                            </button>
+
+                                                        </div>
+
+                                                    </div>
+
+                                                </td>
+
+                                                {/* STATS */}
+
+                                                <td>
+
+                                                    <div className="agent-stat-grid">
+
+                                                        <div className="agent-stat">
+
+                                                            <span>
+                                                                Total
+                                                            </span>
+
+                                                            <strong>
+                                                                {
+                                                                    agent.total_registrations ||
+                                                                    0
+                                                                }
+                                                            </strong>
+
+                                                        </div>
+
+                                                        <div className="agent-stat">
+
+                                                            <span>
+                                                                Pending
+                                                            </span>
+
+                                                            <strong>
+                                                                {
+                                                                    agent.pending_registrations ||
+                                                                    0
+                                                                }
+                                                            </strong>
+
+                                                        </div>
+
+                                                        <div className="agent-stat">
+
+                                                            <span>
+                                                                Approved
+                                                            </span>
+
+                                                            <strong>
+                                                                {
+                                                                    agent.approved_registrations ||
+                                                                    0
+                                                                }
+                                                            </strong>
+
+                                                        </div>
+
+                                                        <div className="agent-stat">
+
+                                                            <span>
+                                                                Rejected
+                                                            </span>
+
+                                                            <strong>
+                                                                {
+                                                                    agent.rejected_registrations ||
+                                                                    0
+                                                                }
+                                                            </strong>
+
+                                                        </div>
+
+                                                    </div>
+
+                                                </td>
+
+                                                {/* ACTIONS */}
+
+                                                <td>
+
+                                                    <div className="agent-action-stack">
+
+                                                        <button
+                                                            type="button"
+                                                            className="edit-button"
+                                                            onClick={() =>
+                                                                openEditModal(
+                                                                    agent
+                                                                )
+                                                            }
+                                                        >
+                                                            Edit
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            className="delete-button"
+                                                            onClick={() =>
+                                                                handleDelete(
+                                                                    agent
+                                                                )
+                                                            }
+                                                        >
+                                                            Delete
+                                                        </button>
+
+                                                    </div>
+
+                                                </td>
+
+                                            </tr>
+                                        )
+                                    )
+                                )}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
                 )}
 
-              </tbody>
-
-            </table>
-
-            {/* PAGINATION */}
-
-            <div
-              className="pagination-bar"
-              style={{
-                display:
-                  "flex",
-                justifyContent:
-                  "space-between",
-                alignItems:
-                  "center",
-                padding:
-                  "1rem 0",
-              }}
-            >
-
-              <div>
-
-                Page{" "}
-                {
-                  currentPage
-                }{" "}
-                of{" "}
-                {
-                  totalPages
-                }
-
-                {" "}
-
-                (
-                {
-                  filteredAgents.length
-                }{" "}
-                items)
-
-              </div>
-
-              <div
-                style={{
-                  display:
-                    "flex",
-                  gap:
-                    "0.5rem",
-                }}
-              >
-
-                <button
-                  className="secondary-button"
-                  disabled={
-                    currentPage ===
-                    1
-                  }
-                  onClick={() =>
-                    setCurrentPage(
-                      (
-                        prev
-                      ) =>
-                        prev -
-                        1
-                    )
-                  }
-                >
-                  Previous
-                </button>
-
-                <select
-                  value={
-                    pageSize
-                  }
-                  onChange={(
-                    event
-                  ) => {
-                    setPageSize(
-                      Number(
-                        event.target.value
-                      )
-                    );
-
-                    setCurrentPage(
-                      1
-                    );
-                  }}
-                >
-                  <option value="10">
-                    10
-                  </option>
-                  <option value="20">
-                    20
-                  </option>
-                  <option value="50">
-                    50
-                  </option>
-                </select>
-
-                <button
-                  className="secondary-button"
-                  disabled={
-                    currentPage ===
-                    totalPages
-                  }
-                  onClick={() =>
-                    setCurrentPage(
-                      (
-                        prev
-                      ) =>
-                        prev +
-                        1
-                    )
-                  }
-                >
-                  Next
-                </button>
-
-              </div>
-
             </div>
 
-          </div>
-        )}
+            {/* ==========================================
+                ADD / EDIT MODAL
+            =========================================== */}
 
-      </div>
+            {showModal && (
+                <div className="modal-overlay">
 
-      {/* MODAL */}
+                    <div className="modal-card">
 
-      {showModal && (
-        <div className="modal-overlay">
+                        <div className="modal-header">
 
-          <div className="modal-card">
+                            <div>
 
-            <div className="modal-header">
+                                <h2>
+                                    {
+                                        editingAgent
+                                            ? "Edit Agent"
+                                            : "Create Agent Account"
+                                    }
+                                </h2>
 
-              <div>
+                                <p>
+                                    {
+                                        editingAgent
+                                            ? "Update Agent information."
+                                            : "Create the Agent profile and login account together."
+                                    }
+                                </p>
 
-                <h2>
-                  {editingAgent
-                    ? "Edit Agent"
-                    : "Add Agent"}
-                </h2>
+                            </div>
 
-                <p>
-                  {editingAgent
-                    ? "Update agent information"
-                    : "Create a new agent"}
-                </p>
+                            <button
+                                type="button"
+                                className="modal-close"
+                                onClick={
+                                    closeModal
+                                }
+                            >
+                                ×
+                            </button>
 
-              </div>
+                        </div>
 
-              <button
-                className="modal-close"
-                onClick={
-                  closeModal
-                }
-              >
-                ×
-              </button>
+                        <form
+                            onSubmit={
+                                handleSubmit
+                            }
+                        >
 
-            </div>
+                            <div className="form-grid">
 
-            <form
-              onSubmit={
-                handleSubmit
-              }
-            >
+                                {/* NAME */}
 
-              <div className="form-group">
+                                <div className="form-group">
 
-                <label>
-                  Agent Name *
-                </label>
+                                    <label>
+                                        Agent Name *
+                                    </label>
 
-                <input
-                  type="text"
-                  name="agent_name"
-                  value={
-                    form.agent_name
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  placeholder="Enter agent name"
-                  required
-                />
+                                    <input
+                                        type="text"
+                                        name="agent_name"
+                                        value={
+                                            form.agent_name
+                                        }
+                                        onChange={
+                                            handleChange
+                                        }
+                                        required
+                                    />
 
-              </div>
+                                </div>
 
-              <div className="form-group">
+                                {/* PHONE */}
 
-                <label>
-                  Contact Phone
-                </label>
+                                <div className="form-group">
 
-                <input
-                  type="text"
-                  name="contact_phone"
-                  value={
-                    form.contact_phone
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  placeholder="020xxxxxxxx"
-                />
+                                    <label>
+                                        Contact Phone
+                                    </label>
 
-              </div>
+                                    <input
+                                        type="text"
+                                        name="contact_phone"
+                                        value={
+                                            form.contact_phone
+                                        }
+                                        onChange={
+                                            handleChange
+                                        }
+                                        placeholder="020xxxxxxxx"
+                                    />
 
-              <div className="form-group">
+                                </div>
 
-                <label>
-                  Contact Email
-                </label>
+                                {/* EMAIL */}
 
-                <input
-                  type="email"
-                  name="contact_email"
-                  value={
-                    form.contact_email
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  placeholder="agent@example.com"
-                />
+                                <div className="form-group">
 
-              </div>
+                                    <label>
+                                        Contact Email *
+                                    </label>
 
-              <div className="form-group">
+                                    <input
+                                        type="email"
+                                        name="contact_email"
+                                        value={
+                                            form.contact_email
+                                        }
+                                        onChange={
+                                            handleChange
+                                        }
+                                        required={
+                                            !editingAgent
+                                        }
+                                    />
 
-                <label>
-                  Address
-                </label>
+                                    <small>
+                                        This email links
+                                        the Agent profile
+                                        to the Agent login.
+                                    </small>
 
-                <textarea
-                  name="address"
-                  value={
-                    form.address
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  placeholder="Enter address"
-                  rows="3"
-                />
+                                </div>
 
-              </div>
+                                {/* ADDRESS */}
 
-              <div className="modal-actions">
+                                <div className="form-group">
 
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={
-                    closeModal
-                  }
-                >
-                  Cancel
-                </button>
+                                    <label>
+                                        Address
+                                    </label>
 
-                <button
-                  type="submit"
-                  className="primary-button"
-                >
-                  {editingAgent
-                    ? "Update Agent"
-                    : "Create Agent"}
-                </button>
+                                    <textarea
+                                        name="address"
+                                        value={
+                                            form.address
+                                        }
+                                        onChange={
+                                            handleChange
+                                        }
+                                        rows="3"
+                                    />
 
-              </div>
+                                </div>
 
-            </form>
+                                {/* CREATE ACCOUNT */}
 
-          </div>
+                                {!editingAgent && (
+                                    <>
+
+                                        <div className="form-group">
+
+                                            <label>
+                                                Agent Login Username *
+                                            </label>
+
+                                            <input
+                                                type="text"
+                                                name="login_username"
+                                                value={
+                                                    form.login_username
+                                                }
+                                                onChange={
+                                                    handleChange
+                                                }
+                                                autoComplete="username"
+                                                required
+                                            />
+
+                                        </div>
+
+                                        <div className="form-group">
+
+                                            <label>
+                                                Agent Login Password *
+                                            </label>
+
+                                            <input
+                                                type="password"
+                                                name="login_password"
+                                                value={
+                                                    form.login_password
+                                                }
+                                                onChange={
+                                                    handleChange
+                                                }
+                                                autoComplete="new-password"
+                                                placeholder="At least 8 chars, A-Z, a-z, 0-9, special"
+                                                required
+                                            />
+
+                                            <small>
+                                                Minimum 8
+                                                characters,
+                                                uppercase,
+                                                lowercase,
+                                                number and
+                                                special
+                                                character.
+                                            </small>
+
+                                        </div>
+
+                                    </>
+                                )}
+
+                            </div>
+
+                            <div className="modal-actions">
+
+                                <button
+                                    type="button"
+                                    className="secondary-button"
+                                    onClick={
+                                        closeModal
+                                    }
+                                    disabled={
+                                        saving
+                                    }
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="submit"
+                                    className="primary-button"
+                                    disabled={
+                                        saving
+                                    }
+                                >
+                                    {
+                                        saving
+                                            ? "Saving..."
+                                            : editingAgent
+                                            ? "Save Changes"
+                                            : "Create Agent"
+                                    }
+                                </button>
+
+                            </div>
+
+                        </form>
+
+                    </div>
+
+                </div>
+            )}
+
+            {/* ==========================================
+                CREATE LOGIN MODAL
+            =========================================== */}
+
+            {showAccountModal &&
+                accountAgent && (
+                    <div className="modal-overlay">
+
+                        <div className="modal-card">
+
+                            <div className="modal-header">
+
+                                <div>
+
+                                    <h2>
+                                        Create Agent Login
+                                    </h2>
+
+                                    <p>
+                                        {
+                                            accountAgent.agent_name
+                                        }
+                                    </p>
+
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="modal-close"
+                                    onClick={
+                                        closeAccountModal
+                                    }
+                                >
+                                    ×
+                                </button>
+
+                            </div>
+
+                            <form
+                                onSubmit={
+                                    createLoginAccount
+                                }
+                            >
+
+                                <div className="form-group">
+
+                                    <label>
+                                        Username *
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="login_username"
+                                        value={
+                                            accountForm.login_username
+                                        }
+                                        onChange={
+                                            handleAccountChange
+                                        }
+                                        autoComplete="username"
+                                        required
+                                    />
+
+                                </div>
+
+                                <div className="form-group">
+
+                                    <label>
+                                        Password *
+                                    </label>
+
+                                    <input
+                                        type="password"
+                                        name="login_password"
+                                        value={
+                                            accountForm.login_password
+                                        }
+                                        onChange={
+                                            handleAccountChange
+                                        }
+                                        autoComplete="new-password"
+                                        placeholder="Strong password"
+                                        required
+                                    />
+
+                                    <small>
+                                        At least 8
+                                        characters with
+                                        uppercase,
+                                        lowercase,
+                                        number and
+                                        special
+                                        character.
+                                    </small>
+
+                                </div>
+
+                                <div className="agent-link-note">
+
+                                    Login email:
+                                    {" "}
+                                    {
+                                        accountAgent.contact_email ||
+                                        "-"
+                                    }
+
+                                </div>
+
+                                <div className="modal-actions">
+
+                                    <button
+                                        type="button"
+                                        className="secondary-button"
+                                        onClick={
+                                            closeAccountModal
+                                        }
+                                        disabled={
+                                            accountSaving
+                                        }
+                                    >
+                                        Cancel
+                                    </button>
+
+                                    <button
+                                        type="submit"
+                                        className="primary-button"
+                                        disabled={
+                                            accountSaving
+                                        }
+                                    >
+                                        {
+                                            accountSaving
+                                                ? "Creating..."
+                                                : "Create Login"
+                                        }
+                                    </button>
+
+                                </div>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+                )}
 
         </div>
-      )}
-
-    </div>
-  );
+    );
 }
 
 export default Agents;

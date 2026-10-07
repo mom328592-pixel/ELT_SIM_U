@@ -1,106 +1,249 @@
 const API_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:3000";
+    import.meta.env.VITE_API_URL ||
+    (
+        import.meta.env.DEV
+            ? "http://localhost:3000"
+            : "https://eltsimu.onrender.com"
+    );
+
+// ======================================================
+// REFRESH ACCESS TOKEN
+// ======================================================
 
 async function refreshAccessToken() {
-  const refreshToken = localStorage.getItem("refresh_token");
+    const refreshToken =
+        localStorage.getItem(
+            "refresh_token"
+        );
 
-  if (!refreshToken) {
-    return false;
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/auth/refresh`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        refresh_token: refreshToken,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return false;
+    if (!refreshToken) {
+        return false;
     }
 
-    if (data?.data?.access_token) {
-      localStorage.setItem("access_token", data.data.access_token);
+    try {
+        const response =
+            await fetch(
+                `${API_URL}/auth/refresh`,
+                {
+                    method: "POST",
 
-      if (data.data.refresh_token) {
-        localStorage.setItem("refresh_token", data.data.refresh_token);
-      }
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                    },
 
-      return true;
+                    body:
+                        JSON.stringify({
+                            refresh_token:
+                                refreshToken,
+                        }),
+                }
+            );
+
+        const data =
+            await response
+                .json()
+                .catch(
+                    () => ({})
+                );
+
+        if (
+            !response.ok
+        ) {
+            return false;
+        }
+
+        if (
+            data?.data
+                ?.access_token
+        ) {
+            localStorage.setItem(
+                "access_token",
+                data.data.access_token
+            );
+
+            if (
+                data.data
+                    .refresh_token
+            ) {
+                localStorage.setItem(
+                    "refresh_token",
+                    data.data.refresh_token
+                );
+            }
+
+            return true;
+        }
+
+        return false;
+    } catch (error) {
+        console.error(
+            "REFRESH TOKEN ERROR:",
+            error
+        );
+
+        return false;
     }
-
-    return false;
-  } catch (error) {
-    console.error("REFRESH TOKEN ERROR:", error);
-    return false;
-  }
 }
 
-export async function apiFetch(endpoint, options = {}) {
-  // ແຍກ isPublic ອອກຈາກ options ເພື່ອບໍ່ໃຫ້ຫຼຸດໄປໃສ່ fetch options
-  const { isPublic = false, headers = {}, ...customOptions } = options;
+// ======================================================
+// CREATE API ERROR
+// ======================================================
 
-  let token = localStorage.getItem("access_token");
+function createApiError(
+    message,
+    status,
+    data = {}
+) {
+    const error =
+        new Error(
+            message ||
+                (
+                    status === 403
+                        ? "Access denied. You do not have permission for this action."
+                        : status === 401
+                        ? "Authentication required."
+                        : "API request failed"
+                )
+        );
 
-  // ກຽມ Headers
-  const isFormData = customOptions.body instanceof FormData;
-  const reqHeaders = {
-    ...(isFormData ? {} : { "Content-Type": "application/json" }),
-    ...headers,
-  };
+    error.status =
+        status;
 
-  // ສົ່ງ Authorization header เฉพาะເວລາທີ່ບໍ່ແມ່ນ Public request ແລະ ມີ Token
-  if (!isPublic && token) {
-    reqHeaders["Authorization"] = `Bearer ${token}`;
-  }
+    error.code =
+        data?.code;
 
-  let response = await fetch(`${API_URL}${endpoint}`, {
-    ...customOptions,
-    headers: reqHeaders,
-  });
+    error.data =
+        data;
 
-  // ຖ້າເປັນ 401 (Unauthorized)
-  if (response.status === 401) {
-    // ຖ້າເປັນ Public Request ແຕ່ໄດ້ 401 (ເຊັ່ນ: Backend ຕອບກັບ 401 ເອງ) ໃຫ້ຂ້າມການ Refresh / Logout
-    if (isPublic) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || "Unauthorized Request");
+    return error;
+}
+
+// ======================================================
+// API FETCH
+// ======================================================
+
+export async function apiFetch(
+    endpoint,
+    options = {}
+) {
+    const {
+        isPublic = false,
+        headers = {},
+        ...customOptions
+    } = options;
+
+    let token =
+        localStorage.getItem(
+            "access_token"
+        );
+
+    const isFormData =
+        customOptions.body instanceof
+        FormData;
+
+    const reqHeaders = {
+        ...(isFormData
+            ? {}
+            : {
+                "Content-Type":
+                    "application/json",
+            }),
+
+        ...headers,
+    };
+
+    if (
+        !isPublic &&
+        token
+    ) {
+        reqHeaders[
+            "Authorization"
+        ] =
+            `Bearer ${token}`;
     }
 
-    // ຖ້າເປັນ Protected Request ໃຫ້ພະຍາຍາມ Refresh Token
-    const refreshed = await refreshAccessToken();
+    let response =
+        await fetch(
+            `${API_URL}${endpoint}`,
+            {
+                ...customOptions,
+                headers:
+                    reqHeaders,
+            }
+        );
 
-    if (!refreshed) {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      localStorage.removeItem("user");
+    // ==================================================
+    // 401
+    // ==================================================
 
-      window.location.href = "/";
+    if (
+        response.status ===
+            401 &&
+        !isPublic
+    ) {
+        const refreshed =
+            await refreshAccessToken();
 
-      throw new Error("Session expired. Please login again.");
+        if (!refreshed) {
+            localStorage.removeItem(
+                "access_token"
+            );
+
+            localStorage.removeItem(
+                "refresh_token"
+            );
+
+            localStorage.removeItem(
+                "user"
+            );
+
+            window.location.href =
+                "/";
+
+            throw createApiError(
+                "Session expired. Please login again.",
+                401
+            );
+        }
+
+        token =
+            localStorage.getItem(
+                "access_token"
+            );
+
+        reqHeaders[
+            "Authorization"
+        ] =
+            `Bearer ${token}`;
+
+        response =
+            await fetch(
+                `${API_URL}${endpoint}`,
+                {
+                    ...customOptions,
+                    headers:
+                        reqHeaders,
+                }
+            );
     }
 
-    // ຫຼັງຈາກ Refresh Token ສຳເລັດ ໃຫ້ເອີ້ນ API ໃໝ່ອີກຄັ້ງ
-    token = localStorage.getItem("access_token");
-    reqHeaders["Authorization"] = `Bearer ${token}`;
+    const data =
+        await response
+            .json()
+            .catch(
+                () => ({})
+            );
 
-    response = await fetch(`${API_URL}${endpoint}`, {
-      ...customOptions,
-      headers: reqHeaders,
-    });
-  }
+    if (
+        !response.ok
+    ) {
+        throw createApiError(
+            data?.message,
+            response.status,
+            data
+        );
+    }
 
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    throw new Error(data.message || "API request failed");
-  }
-
-  return data;
+    return data;
 }
