@@ -58,11 +58,6 @@ const agentsRoutes =
         "./routes/agents.routes"
     );
 
-const agentPortalRoutes =
-    require(
-        "./routes/agent-portal.routes"
-    );
-
 const simsRoutes =
     require(
         "./routes/sims.routes"
@@ -475,14 +470,6 @@ app.use(
 // AGENT PORTAL
 // ROLE 3 ONLY
 // =====================================================
-
-app.use(
-    "/agent-portal",
-    authenticateToken,
-    authorizeRoles(3),
-    agentPortalRoutes
-);
-
 // =====================================================
 // SIM FILE HISTORY
 // =====================================================

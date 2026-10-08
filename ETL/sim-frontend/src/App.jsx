@@ -18,7 +18,6 @@ import AdminLayout from "./layouts/AdminLayout";
 import CustomerLayout from "./layouts/CustomerLayout";
 
 import Dashboard from "./pages/admin/Dashboard";
-import AgentDashboard from "./pages/admin/AgentDashboard";
 import Management from "./pages/admin/Management";
 import SimCenter from "./pages/admin/SimCenter";
 import Registrations from "./pages/admin/Registrations";
@@ -93,10 +92,7 @@ const AccessDenied =
                                         user?.role_id
                                 );
 
-                            window.location.href =
-                                roleId === 3
-                                    ? "/agent-dashboard"
-                                    : "/dashboard";
+                          window.location.replace("/dashboard");
                         }}
                     >
                         Back
@@ -691,8 +687,7 @@ function App() {
 
                 window.location.href =
                     roleId === 3
-                        ? "/agent-dashboard"
-                        : "/dashboard";
+                         "/dashboard";
 
             } catch (
                 error
@@ -752,19 +747,12 @@ function App() {
                 <Route
                     path="/"
                     element={
-                        loggedIn ? (
-                            <Navigate
-                                to={
-                                    Number(
-                                        user?.id_role ??
-                                            user?.role_id
-                                    ) === 3
-                                        ? "/agent-dashboard"
-                                        : "/dashboard"
-                                }
-                                replace
-                            />
-                        ) : (
+                       loggedIn ? (
+    <Navigate
+        to="/dashboard"
+        replace
+    />
+): (
                             <LoginPage
                                 username={
                                     username
@@ -823,30 +811,7 @@ function App() {
 
                 {/* AGENT DASHBOARD */}
 
-                <Route
-                    path="/agent-dashboard"
-                    element={
-                        <ProtectedRoute
-                            user={
-                                user
-                            }
-                            allowedRoles={[
-                                3,
-                            ]}
-                        >
-                            <AdminLayout
-                                user={
-                                    user
-                                }
-                                onLogout={
-                                    logout
-                                }
-                            >
-                                <AgentDashboard />
-                            </AdminLayout>
-                        </ProtectedRoute>
-                    }
-                />
+                
 
                 {/* REGISTRATIONS */}
 
@@ -980,7 +945,6 @@ function App() {
                             allowedRoles={[
                                 1,
                                 2,
-                                3,
                             ]}
                         >
                             <AdminLayout
@@ -1005,15 +969,8 @@ function App() {
                         <Navigate
                             to={
                                 loggedIn
-                                    ? (
-                                        Number(
-                                            user?.id_role ??
-                                                user?.role_id
-                                        ) === 3
-                                            ? "/agent-dashboard"
-                                            : "/dashboard"
-                                    )
-                                    : "/"
+    ? "/dashboard"
+    : "/"
                             }
                             replace
                         />

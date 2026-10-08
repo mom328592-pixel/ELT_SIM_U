@@ -504,7 +504,32 @@ const login = async (
         });
     }
 };
+// =================================================
+// AGENT LOGIN DISABLED
+// Agents use the public registration link only.
+// =================================================
 
+if (
+    Number(user.id_role) === 3 ||
+    String(user.role_name || "").trim().toLowerCase() === "agent"
+) {
+    await createAuditLog({
+        req,
+        action: "LOGIN_BLOCKED_AGENT",
+        targetEntity: "users",
+        targetId: user.id_user,
+        metadata: {
+            username: user.username,
+            reason: "AGENT_LOGIN_DISABLED",
+        },
+    }).catch(() => {});
+
+    return res.status(403).json({
+        success: false,
+        message:
+            "Agent accounts do not have backend login. Use the Agent public registration link.",
+    });
+}
 // =====================================================
 // REFRESH ACCESS TOKEN
 // =====================================================

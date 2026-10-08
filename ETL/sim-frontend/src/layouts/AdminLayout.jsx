@@ -1,7 +1,4 @@
-import {
-    useState,
-} from "react";
-
+import { useState } from "react";
 import Sidebar from "../components/Sidebar";
 
 function AdminLayout({
@@ -9,7 +6,6 @@ function AdminLayout({
     onLogout,
     children,
 }) {
-
     const [
         sidebarCollapsed,
         setSidebarCollapsed,
@@ -28,23 +24,13 @@ function AdminLayout({
                     : ""
             }`}
         >
-
-            {/* ========================================
-                SIDEBAR
-            ========================================= */}
-
             <Sidebar
                 user={user}
                 onLogout={onLogout}
-                collapsed={
-                    sidebarCollapsed
-                }
+                collapsed={sidebarCollapsed}
                 onToggle={() =>
                     setSidebarCollapsed(
-                        (
-                            prev
-                        ) =>
-                            !prev
+                        (prev) => !prev
                     )
                 }
                 mobileOpen={
@@ -56,10 +42,6 @@ function AdminLayout({
                     )
                 }
             />
-
-            {/* ========================================
-                MOBILE OVERLAY
-            ========================================= */}
 
             {mobileSidebarOpen && (
                 <button
@@ -74,16 +56,8 @@ function AdminLayout({
                 />
             )}
 
-            {/* ========================================
-                MAIN
-            ========================================= */}
-
             <main className="main-content">
-
-                {/* MOBILE HEADER */}
-
                 <div className="mobile-header">
-
                     <button
                         type="button"
                         className="mobile-menu-button"
@@ -98,96 +72,59 @@ function AdminLayout({
                     </button>
 
                     <div className="mobile-header-title">
-
                         <strong>
                             ELT SIM
                         </strong>
 
                         <span>
-                            {
-                                user?.role_name ||
-                                "Management Dashboard"
-                            }
+                            Management Dashboard
                         </span>
-
                     </div>
-
                 </div>
 
-                {/* TOPBAR */}
-
                 <header className="topbar-main">
-
                     <div className="topbar-title">
-
                         <h2>
                             SIM Registration System
                         </h2>
 
                         <span>
-                            {
-                                Number(
-                                    user?.id_role ??
-                                        user?.role_id
-                                ) === 3
-                                    ? "Agent Dashboard"
-                                    : "Management Dashboard"
-                            }
+                            Management Dashboard
                         </span>
-
                     </div>
 
                     <div className="topbar-right">
-
                         <div className="topbar-user">
-
                             <div className="topbar-avatar">
-
                                 {(
                                     user?.fullname ||
                                     user?.username ||
                                     "U"
                                 )
-                                    .charAt(
-                                        0
-                                    )
+                                    .charAt(0)
                                     .toUpperCase()}
-
                             </div>
 
                             <div>
-
                                 <strong>
-                                    {
-                                        user?.fullname ||
+                                    {user?.fullname ||
                                         user?.username ||
-                                        "User"
-                                    }
+                                        "User"}
                                 </strong>
 
                                 <span>
-                                    {
-                                        user?.role_name ||
-                                        "User"
-                                    }
+                                    {user?.role_name ||
+                                        "User"}
                                 </span>
-
                             </div>
-
                         </div>
-
                     </div>
-
                 </header>
-
-                {/* PAGE */}
 
                 <section className="page-content">
                     {children}
                 </section>
-
             </main>
-
         </div>
     );
 }
