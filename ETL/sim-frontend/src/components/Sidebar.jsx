@@ -30,6 +30,7 @@ function Sidebar({
                 collapsed ? "collapsed" : ""
             } ${mobileOpen ? "open" : ""}`}
         >
+            {/* Brand */}
             <div className="brand">
                 <div className="brand-logo">
                     SIM
@@ -44,14 +45,17 @@ function Sidebar({
                     </div>
                 )}
 
-                <button
-                    type="button"
-                    className="sidebar-toggle"
-                    onClick={onToggle}
-                    title="Toggle sidebar"
-                >
-                    {collapsed ? "»" : "«"}
-                </button>
+                {!mobileOpen && (
+                    <button
+                        type="button"
+                        className="sidebar-toggle"
+                        onClick={onToggle}
+                        title="Toggle sidebar"
+                        aria-label="Toggle sidebar"
+                    >
+                        {collapsed ? "»" : "«"}
+                    </button>
+                )}
 
                 {mobileOpen && (
                     <button
@@ -65,7 +69,11 @@ function Sidebar({
                 )}
             </div>
 
-            <nav className="sidebar-menu">
+            {/* Navigation */}
+            <nav
+                className="sidebar-menu"
+                aria-label="Main navigation"
+            >
                 <NavLink
                     to="/dashboard"
                     className={itemClass}
@@ -74,12 +82,7 @@ function Sidebar({
                     <span className="menu-icon">
                         ⌂
                     </span>
-
-                    {!collapsed && (
-                        <span>
-                            Dashboard
-                        </span>
-                    )}
+                    <span>Dashboard</span>
                 </NavLink>
 
                 {canSee(1, 2) && (
@@ -89,14 +92,9 @@ function Sidebar({
                         onClick={closeMobile}
                     >
                         <span className="menu-icon">
-                            R
+                            ✓
                         </span>
-
-                        {!collapsed && (
-                            <span>
-                                Registrations
-                            </span>
-                        )}
+                        <span>Registrations</span>
                     </NavLink>
                 )}
 
@@ -109,12 +107,7 @@ function Sidebar({
                         <span className="menu-icon">
                             S
                         </span>
-
-                        {!collapsed && (
-                            <span>
-                                SIM Center
-                            </span>
-                        )}
+                        <span>SIM Center</span>
                     </NavLink>
                 )}
 
@@ -127,12 +120,7 @@ function Sidebar({
                         <span className="menu-icon">
                             P
                         </span>
-
-                        {!collapsed && (
-                            <span>
-                                People & Access
-                            </span>
-                        )}
+                        <span>People & Access</span>
                     </NavLink>
                 )}
 
@@ -145,32 +133,25 @@ function Sidebar({
                         <span className="menu-icon">
                             ▥
                         </span>
-
-                        {!collapsed && (
-                            <span>
-                                Reports
-                            </span>
-                        )}
+                        <span>Reports</span>
                     </NavLink>
                 )}
 
-                <NavLink
-                    to="/settings"
-                    className={itemClass}
-                    onClick={closeMobile}
-                >
-                    <span className="menu-icon">
-                        ⚙
-                    </span>
-
-                    {!collapsed && (
-                        <span>
-                            Settings
+                {canSee(1, 2) && (
+                    <NavLink
+                        to="/settings"
+                        className={itemClass}
+                        onClick={closeMobile}
+                    >
+                        <span className="menu-icon">
+                            ⚙
                         </span>
-                    )}
-                </NavLink>
+                        <span>Settings</span>
+                    </NavLink>
+                )}
             </nav>
 
+            {/* User information and logout */}
             <div className="sidebar-bottom">
                 {!collapsed && (
                     <div className="sidebar-user">
@@ -181,8 +162,7 @@ function Sidebar({
                         </strong>
 
                         <span>
-                            {user?.role_name ||
-                                "User"}
+                            {user?.role_name || "User"}
                         </span>
                     </div>
                 )}
@@ -193,12 +173,7 @@ function Sidebar({
                     onClick={onLogout}
                 >
                     <span>↪</span>
-
-                    {!collapsed && (
-                        <span>
-                            Logout
-                        </span>
-                    )}
+                    <span>Logout</span>
                 </button>
             </div>
         </aside>

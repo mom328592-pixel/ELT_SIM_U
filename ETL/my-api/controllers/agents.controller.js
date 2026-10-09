@@ -184,7 +184,7 @@ const getAgentById = async (req, res) => {
 
 // ======================================================
 // CREATE AGENT
-// No Agent login account is created.
+// NO LOGIN ACCOUNT
 // ======================================================
 
 const createAgent = async (req, res) => {
@@ -209,29 +209,31 @@ const createAgent = async (req, res) => {
 
         await connection.beginTransaction();
 
-        const publicToken = generatePublicToken();
+        const publicToken =
+            generatePublicToken();
 
-        const [result] = await connection.query(
-            `
-            INSERT INTO agents (
-                agent_name,
-                contact_phone,
-                contact_email,
-                address,
-                public_token,
-                created_by
-            )
-            VALUES (?, ?, ?, ?, ?, ?)
-            `,
-            [
-                agent_name.trim(),
-                contact_phone?.trim() || null,
-                contact_email?.trim() || null,
-                address?.trim() || null,
-                publicToken,
-                req.user?.id_user || null,
-            ]
-        );
+        const [result] =
+            await connection.query(
+                `
+                INSERT INTO agents (
+                    agent_name,
+                    contact_phone,
+                    contact_email,
+                    address,
+                    public_token,
+                    created_by
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                `,
+                [
+                    agent_name.trim(),
+                    contact_phone?.trim() || null,
+                    contact_email?.trim() || null,
+                    address?.trim() || null,
+                    publicToken,
+                    req.user?.id_user || null,
+                ]
+            );
 
         await connection.commit();
         connection.release();
@@ -242,20 +244,30 @@ const createAgent = async (req, res) => {
             targetEntity: "agents",
             targetId: result.insertId,
             metadata: {
-                agent_name: agent_name.trim(),
-                public_token_generated: true,
-                agent_login_enabled: false,
+                agent_name:
+                    agent_name.trim(),
+                public_token_generated:
+                    true,
+                agent_login_enabled:
+                    false,
             },
         });
 
         return res.status(201).json({
             success: true,
-            message: "Agent created successfully",
+            message:
+                "Agent created successfully",
             data: {
-                id_agent: result.insertId,
-                agent_name: agent_name.trim(),
-                public_token: publicToken,
-                public_url: getPublicUrl(publicToken),
+                id_agent:
+                    result.insertId,
+                agent_name:
+                    agent_name.trim(),
+                public_token:
+                    publicToken,
+                public_url:
+                    getPublicUrl(
+                        publicToken
+                    ),
             },
         });
     } catch (error) {
@@ -265,12 +277,19 @@ const createAgent = async (req, res) => {
 
         connection.release();
 
-        console.error("POST /agents ERROR:", error);
+        console.error(
+            "POST /agents ERROR:",
+            error
+        );
 
-        if (error.code === "ER_DUP_ENTRY") {
+        if (
+            error.code ===
+            "ER_DUP_ENTRY"
+        ) {
             return res.status(409).json({
                 success: false,
-                message: "Duplicate Agent data",
+                message:
+                    "Duplicate Agent data",
             });
         }
 
@@ -299,35 +318,44 @@ const updateAgent = async (req, res) => {
         if (!agent_name?.trim()) {
             return res.status(400).json({
                 success: false,
-                message: "Agent name is required",
+                message:
+                    "Agent name is required",
             });
         }
 
-        const [result] = await pool.query(
-            `
-            UPDATE agents
-            SET
-                agent_name = ?,
-                contact_phone = ?,
-                contact_email = ?,
-                address = ?,
-                updated_at = NOW()
-            WHERE id_agent = ?
-              AND deleted_at IS NULL
-            `,
-            [
-                agent_name.trim(),
-                contact_phone?.trim() || null,
-                contact_email?.trim() || null,
-                address?.trim() || null,
-                id,
-            ]
-        );
+        const [result] =
+            await pool.query(
+                `
+                UPDATE agents
+                SET
+                    agent_name = ?,
+                    contact_phone = ?,
+                    contact_email = ?,
+                    address = ?,
+                    updated_at = NOW()
 
-        if (result.affectedRows === 0) {
+                WHERE id_agent = ?
+                  AND deleted_at IS NULL
+                `,
+                [
+                    agent_name.trim(),
+                    contact_phone?.trim() ||
+                        null,
+                    contact_email?.trim() ||
+                        null,
+                    address?.trim() || null,
+                    id,
+                ]
+            );
+
+        if (
+            result.affectedRows ===
+            0
+        ) {
             return res.status(404).json({
                 success: false,
-                message: "Agent not found",
+                message:
+                    "Agent not found",
             });
         }
 
@@ -337,17 +365,23 @@ const updateAgent = async (req, res) => {
             targetEntity: "agents",
             targetId: id,
             metadata: {
-                agent_name: agent_name.trim(),
-                agent_login_enabled: false,
+                agent_name:
+                    agent_name.trim(),
+                agent_login_enabled:
+                    false,
             },
         });
 
         return res.json({
             success: true,
-            message: "Agent updated successfully",
+            message:
+                "Agent updated successfully",
         });
     } catch (error) {
-        console.error("PUT /agents/:id ERROR:", error);
+        console.error(
+            "PUT /agents/:id ERROR:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
@@ -360,91 +394,116 @@ const updateAgent = async (req, res) => {
 // REGENERATE PUBLIC LINK
 // ======================================================
 
-const regeneratePublicLink = async (req, res) => {
-    try {
-        const { id } = req.params;
+const regeneratePublicLink =
+    async (req, res) => {
+        try {
+            const { id } = req.params;
 
-        const publicToken = generatePublicToken();
+            const publicToken =
+                generatePublicToken();
 
-        const [result] = await pool.query(
-            `
-            UPDATE agents
-            SET
-                public_token = ?,
-                updated_at = NOW()
-            WHERE id_agent = ?
-              AND deleted_at IS NULL
-            `,
-            [
-                publicToken,
-                id,
-            ]
-        );
+            const [result] =
+                await pool.query(
+                    `
+                    UPDATE agents
+                    SET
+                        public_token = ?,
+                        updated_at = NOW()
 
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
+                    WHERE id_agent = ?
+                      AND deleted_at IS NULL
+                    `,
+                    [
+                        publicToken,
+                        id,
+                    ]
+                );
+
+            if (
+                result.affectedRows ===
+                0
+            ) {
+                return res
+                    .status(404)
+                    .json({
+                        success: false,
+                        message:
+                            "Agent not found",
+                    });
+            }
+
+            await createAuditLog({
+                req,
+                action:
+                    "REGENERATE_AGENT_PUBLIC_LINK",
+                targetEntity:
+                    "agents",
+                targetId: id,
+                metadata: {
+                    public_token_regenerated:
+                        true,
+                },
+            });
+
+            return res.json({
+                success: true,
+                message:
+                    "Public registration link regenerated successfully",
+                data: {
+                    public_token:
+                        publicToken,
+                    public_url:
+                        getPublicUrl(
+                            publicToken
+                        ),
+                },
+            });
+        } catch (error) {
+            console.error(
+                "POST /agents/:id/public-link ERROR:",
+                error
+            );
+
+            return res.status(500).json({
                 success: false,
-                message: "Agent not found",
+                message:
+                    "Database error",
             });
         }
-
-        await createAuditLog({
-            req,
-            action: "REGENERATE_AGENT_PUBLIC_LINK",
-            targetEntity: "agents",
-            targetId: id,
-            metadata: {
-                public_token_regenerated: true,
-            },
-        });
-
-        return res.json({
-            success: true,
-            message:
-                "Public registration link regenerated successfully",
-            data: {
-                public_token: publicToken,
-                public_url: getPublicUrl(publicToken),
-            },
-        });
-    } catch (error) {
-        console.error(
-            "POST /agents/:id/public-link ERROR:",
-            error
-        );
-
-        return res.status(500).json({
-            success: false,
-            message: "Database error",
-        });
-    }
-};
+    };
 
 // ======================================================
 // DELETE AGENT
-// Soft delete only.
+// SOFT DELETE
 // ======================================================
 
 const deleteAgent = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const [result] = await pool.query(
-            `
-            UPDATE agents
-            SET
-                deleted_at = NOW(),
-                updated_at = NOW()
-            WHERE id_agent = ?
-              AND deleted_at IS NULL
-            `,
-            [id]
-        );
+        const [result] =
+            await pool.query(
+                `
+                UPDATE agents
 
-        if (result.affectedRows === 0) {
+                SET
+                    deleted_at = NOW(),
+                    updated_at = NOW()
+
+                WHERE id_agent = ?
+                  AND deleted_at IS NULL
+                `,
+                [id]
+            );
+
+        if (
+            result.affectedRows ===
+            0
+        ) {
             return res.status(404).json({
                 success: false,
-                message: "Agent not found",
+                message:
+                    "Agent not found",
             });
         }
 
@@ -454,14 +513,17 @@ const deleteAgent = async (req, res) => {
             targetEntity: "agents",
             targetId: id,
             metadata: {
-                soft_deleted: true,
-                agent_login_enabled: false,
+                soft_deleted:
+                    true,
+                agent_login_enabled:
+                    false,
             },
         });
 
         return res.json({
             success: true,
-            message: "Agent deleted successfully",
+            message:
+                "Agent deleted successfully",
         });
     } catch (error) {
         console.error(
@@ -471,7 +533,8 @@ const deleteAgent = async (req, res) => {
 
         return res.status(500).json({
             success: false,
-            message: "Database error",
+            message:
+                "Database error",
         });
     }
 };

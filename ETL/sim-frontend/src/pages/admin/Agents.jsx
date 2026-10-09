@@ -6,7 +6,7 @@ import {
 
 import { apiFetch } from "../../api";
 
-const initialForm = {
+const emptyForm = {
     agent_name: "",
     contact_phone: "",
     contact_email: "",
@@ -14,329 +14,534 @@ const initialForm = {
 };
 
 function Agents() {
-    const [agents, setAgents] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [linkActionId, setLinkActionId] = useState(null);
-    const [copiedId, setCopiedId] = useState(null);
-    const [search, setSearch] = useState("");
-    const [error, setError] = useState("");
-    const [feedback, setFeedback] = useState("");
-    const [showModal, setShowModal] = useState(false);
-    const [editingAgent, setEditingAgent] = useState(null);
-    const [form, setForm] = useState(initialForm);
+    const [agents, setAgents] =
+        useState([]);
 
-    const loadAgents = useCallback(async () => {
-        try {
-            setLoading(true);
-            setError("");
+    const [loading, setLoading] =
+        useState(true);
 
-            const response = await apiFetch("/agents");
-            setAgents(response.data || []);
-        } catch (err) {
-            console.error("GET AGENTS ERROR:", err);
-            setError(
-                err.message || "Failed to load agents."
-            );
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    const [saving, setSaving] =
+        useState(false);
+
+    const [showModal, setShowModal] =
+        useState(false);
+
+    const [editingAgent, setEditingAgent] =
+        useState(null);
+
+    const [form, setForm] =
+        useState(emptyForm);
+
+    const [search, setSearch] =
+        useState("");
+
+    const [error, setError] =
+        useState("");
+
+    const [message, setMessage] =
+        useState("");
+
+    const [
+        linkActionId,
+        setLinkActionId,
+    ] = useState(null);
+
+    const [
+        copiedId,
+        setCopiedId,
+    ] = useState(null);
+
+    // =================================================
+    // LOAD AGENTS
+    // =================================================
+
+    const loadAgents =
+        useCallback(
+            async () => {
+                try {
+                    setLoading(
+                        true
+                    );
+                    setError("");
+
+                    const response =
+                        await apiFetch(
+                            "/agents"
+                        );
+
+                    setAgents(
+                        response.data ||
+                            []
+                    );
+                } catch (
+                    error
+                ) {
+                    console.error(
+                        error
+                    );
+
+                    setError(
+                        error.message ||
+                            "Failed to load agents."
+                    );
+                } finally {
+                    setLoading(
+                        false
+                    );
+                }
+            },
+            []
+        );
 
     useEffect(() => {
         loadAgents();
     }, [loadAgents]);
 
-    const openAddModal = () => {
-        setEditingAgent(null);
-        setForm({ ...initialForm });
-        setFeedback("");
-        setShowModal(true);
-    };
+    // =================================================
+    // OPEN ADD
+    // =================================================
 
-    const openEditModal = (agent) => {
-        setEditingAgent(agent);
+    const openAdd = () => {
+        setEditingAgent(
+            null
+        );
 
         setForm({
-            agent_name: agent.agent_name || "",
-            contact_phone: agent.contact_phone || "",
-            contact_email: agent.contact_email || "",
-            address: agent.address || "",
+            ...emptyForm,
         });
 
-        setFeedback("");
-        setShowModal(true);
+        setMessage("");
+        setError("");
+        setShowModal(
+            true
+        );
     };
+
+    // =================================================
+    // OPEN EDIT
+    // =================================================
+
+    const openEdit =
+        (agent) => {
+            setEditingAgent(
+                agent
+            );
+
+            setForm({
+                agent_name:
+                    agent.agent_name ||
+                    "",
+                contact_phone:
+                    agent.contact_phone ||
+                    "",
+                contact_email:
+                    agent.contact_email ||
+                    "",
+                address:
+                    agent.address ||
+                    "",
+            });
+
+            setMessage("");
+            setError("");
+            setShowModal(
+                true
+            );
+        };
+
+    // =================================================
+    // CLOSE
+    // =================================================
 
     const closeModal = () => {
         if (saving) return;
 
-        setShowModal(false);
-        setEditingAgent(null);
-        setForm({ ...initialForm });
-        setFeedback("");
+        setShowModal(
+            false
+        );
+
+        setEditingAgent(
+            null
+        );
+
+        setForm({
+            ...emptyForm,
+        });
     };
 
-    const handleChange = (event) => {
-        const {
-            name,
-            value,
-        } = event.target;
+    // =================================================
+    // CHANGE
+    // =================================================
 
-        setForm((prev) => ({
-            ...prev,
-            [name]: value,
-        }));
-    };
+    const handleChange =
+        (event) => {
+            const {
+                name,
+                value,
+            } = event.target;
 
-    const handleSubmit = async (event) => {
-        event.preventDefault();
-
-        if (!form.agent_name.trim()) {
-            setFeedback(
-                "Agent name is required."
+            setForm(
+                (prev) => ({
+                    ...prev,
+                    [name]:
+                        value,
+                })
             );
-            return;
-        }
+        };
 
-        try {
-            setSaving(true);
-            setFeedback("");
+    // =================================================
+    // SAVE
+    // =================================================
 
-            const payload = {
-                agent_name:
-                    form.agent_name.trim(),
+    const handleSubmit =
+        async (
+            event
+        ) => {
+            event.preventDefault();
 
-                contact_phone:
-                    form.contact_phone.trim() ||
-                    null,
-
-                contact_email:
-                    form.contact_email.trim() ||
-                    null,
-
-                address:
-                    form.address.trim() ||
-                    null,
-            };
-
-            if (editingAgent) {
-                await apiFetch(
-                    `/agents/${editingAgent.id_agent}`,
-                    {
-                        method: "PUT",
-                        body: JSON.stringify(payload),
-                    }
+            if (
+                !form.agent_name.trim()
+            ) {
+                setError(
+                    "Agent name is required."
                 );
-
-                setFeedback(
-                    "Agent updated successfully."
-                );
-            } else {
-                const response = await apiFetch(
-                    "/agents",
-                    {
-                        method: "POST",
-                        body: JSON.stringify(payload),
-                    }
-                );
-
-                const newAgent =
-                    response?.data;
-
-                if (newAgent?.public_url) {
-                    window.alert(
-                        `Agent created successfully.\n\nPublic registration link:\n${newAgent.public_url}`
-                    );
-                }
-            }
-
-            closeModal();
-            await loadAgents();
-        } catch (err) {
-            console.error(
-                "SAVE AGENT ERROR:",
-                err
-            );
-
-            setFeedback(
-                err.message ||
-                    "Failed to save Agent."
-            );
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const handleDelete = async (agent) => {
-        const confirmed =
-            window.confirm(
-                `Delete "${agent.agent_name}"?\n\nThe Agent profile will be disabled. Existing registrations will remain for history.`
-            );
-
-        if (!confirmed) return;
-
-        try {
-            await apiFetch(
-                `/agents/${agent.id_agent}`,
-                {
-                    method: "DELETE",
-                }
-            );
-
-            setFeedback(
-                "Agent deleted successfully."
-            );
-
-            await loadAgents();
-        } catch (err) {
-            setFeedback(
-                err.message ||
-                    "Failed to delete Agent."
-            );
-        }
-    };
-
-    const copyPublicLink = async (agent) => {
-        if (!agent.public_url) return;
-
-        try {
-            await navigator.clipboard.writeText(
-                agent.public_url
-            );
-
-            setCopiedId(agent.id_agent);
-
-            window.setTimeout(
-                () =>
-                    setCopiedId(null),
-                1600
-            );
-        } catch {
-            window.prompt(
-                "Copy this Agent registration link:",
-                agent.public_url
-            );
-        }
-    };
-
-    const sharePublicLink = async (agent) => {
-        if (!agent.public_url) return;
-
-        const message =
-            `ETL SIM Registration\n\n` +
-            `Please open this link to register a tourist SIM:\n` +
-            `${agent.public_url}`;
-
-        try {
-            if (navigator.share) {
-                await navigator.share({
-                    title:
-                        "ETL SIM Registration",
-                    text: message,
-                    url: agent.public_url,
-                });
-
                 return;
             }
 
-            await navigator.clipboard.writeText(
-                message
-            );
+            try {
+                setSaving(
+                    true
+                );
+                setError("");
 
-            window.alert(
-                "Sharing is not available in this browser. The message was copied."
-            );
-        } catch (err) {
-            if (
-                err?.name !==
-                "AbortError"
+                const payload = {
+                    agent_name:
+                        form.agent_name.trim(),
+
+                    contact_phone:
+                        form.contact_phone.trim() ||
+                        null,
+
+                    contact_email:
+                        form.contact_email.trim() ||
+                        null,
+
+                    address:
+                        form.address.trim() ||
+                        null,
+                };
+
+                if (
+                    editingAgent
+                ) {
+                    await apiFetch(
+                        `/agents/${editingAgent.id_agent}`,
+                        {
+                            method:
+                                "PUT",
+
+                            body:
+                                JSON.stringify(
+                                    payload
+                                ),
+                        }
+                    );
+
+                    setMessage(
+                        "Agent updated successfully."
+                    );
+                } else {
+                    const response =
+                        await apiFetch(
+                            "/agents",
+                            {
+                                method:
+                                    "POST",
+
+                                body:
+                                    JSON.stringify(
+                                        payload
+                                    ),
+                            }
+                        );
+
+                    if (
+                        response?.data
+                            ?.public_url
+                    ) {
+                        window.alert(
+                            "Agent created successfully.\n\nPublic Registration Link:\n" +
+                                response.data.public_url
+                        );
+                    }
+
+                    setMessage(
+                        "Agent created successfully."
+                    );
+                }
+
+                setShowModal(
+                    false
+                );
+
+                setEditingAgent(
+                    null
+                );
+
+                setForm({
+                    ...emptyForm,
+                });
+
+                await loadAgents();
+            } catch (
+                error
             ) {
                 console.error(
-                    "SHARE AGENT LINK ERROR:",
-                    err
+                    error
+                );
+
+                setError(
+                    error.message ||
+                        "Failed to save Agent."
+                );
+            } finally {
+                setSaving(
+                    false
                 );
             }
-        }
-    };
+        };
 
-    const openWhatsApp = (agent) => {
-        if (!agent.public_url) return;
+    // =================================================
+    // DELETE
+    // =================================================
 
-        const message =
-            `ETL SIM Registration\n\n` +
-            `Please open this link to register a tourist SIM:\n` +
-            `${agent.public_url}`;
-
-        window.open(
-            `https://wa.me/?text=${encodeURIComponent(
-                message
-            )}`,
-            "_blank",
-            "noopener,noreferrer"
-        );
-    };
-
-    const regeneratePublicLink = async (
-        agent
-    ) => {
-        const confirmed =
-            window.confirm(
-                `Regenerate the public registration link for "${agent.agent_name}"?\n\nThe old link will stop working.`
-            );
-
-        if (!confirmed) return;
-
-        try {
-            setLinkActionId(
-                agent.id_agent
-            );
-
-            await apiFetch(
-                `/agents/${agent.id_agent}/public-link`,
-                {
-                    method: "POST",
-                }
-            );
-
-            setFeedback(
-                "Public registration link regenerated successfully."
-            );
-
-            await loadAgents();
-        } catch (err) {
-            setFeedback(
-                err.message ||
-                    "Failed to regenerate public link."
-            );
-        } finally {
-            setLinkActionId(null);
-        }
-    };
-
-    const filteredAgents = agents.filter(
-        (agent) => {
-            const keyword =
-                search
-                    .trim()
-                    .toLowerCase();
-
-            if (!keyword) return true;
-
-            return [
-                agent.agent_name,
-                agent.contact_phone,
-                agent.contact_email,
-                agent.address,
-            ]
-                .filter(Boolean)
-                .some((value) =>
-                    String(value)
-                        .toLowerCase()
-                        .includes(keyword)
+    const handleDelete =
+        async (agent) => {
+            const ok =
+                window.confirm(
+                    `Delete "${agent.agent_name}"?`
                 );
-        }
-    );
+
+            if (!ok) return;
+
+            try {
+                await apiFetch(
+                    `/agents/${agent.id_agent}`,
+                    {
+                        method:
+                            "DELETE",
+                    }
+                );
+
+                setMessage(
+                    "Agent deleted successfully."
+                );
+
+                await loadAgents();
+            } catch (
+                error
+            ) {
+                setError(
+                    error.message ||
+                        "Failed to delete Agent."
+                );
+            }
+        };
+
+    // =================================================
+    // COPY LINK
+    // =================================================
+
+    const copyLink =
+        async (agent) => {
+            if (
+                !agent.public_url
+            )
+                return;
+
+            try {
+                await navigator.clipboard.writeText(
+                    agent.public_url
+                );
+
+                setCopiedId(
+                    agent.id_agent
+                );
+
+                setTimeout(
+                    () =>
+                        setCopiedId(
+                            null
+                        ),
+                    1500
+                );
+            } catch {
+                window.prompt(
+                    "Copy public registration link:",
+                    agent.public_url
+                );
+            }
+        };
+
+    // =================================================
+    // SHARE
+    // =================================================
+
+    const shareLink =
+        async (agent) => {
+            if (
+                !agent.public_url
+            )
+                return;
+
+            const text =
+                `SIM Registration\n\n` +
+                `Please open this link to register your SIM:\n` +
+                agent.public_url;
+
+            try {
+                if (
+                    navigator.share
+                ) {
+                    await navigator.share(
+                        {
+                            title:
+                                "SIM Registration",
+                            text,
+                            url:
+                                agent.public_url,
+                        }
+                    );
+                    return;
+                }
+
+                await navigator.clipboard.writeText(
+                    text
+                );
+
+                setMessage(
+                    "Registration message copied."
+                );
+            } catch (
+                error
+            ) {
+                if (
+                    error?.name !==
+                    "AbortError"
+                ) {
+                    setError(
+                        "Unable to share link."
+                    );
+                }
+            }
+        };
+
+    // =================================================
+    // WHATSAPP
+    // =================================================
+
+    const openWhatsApp =
+        (agent) => {
+            if (
+                !agent.public_url
+            )
+                return;
+
+            const text =
+                `SIM Registration\n\n` +
+                `Please open this link to register your SIM:\n` +
+                agent.public_url;
+
+            window.open(
+                `https://wa.me/?text=${encodeURIComponent(
+                    text
+                )}`,
+                "_blank",
+                "noopener,noreferrer"
+            );
+        };
+
+    // =================================================
+    // REGENERATE
+    // =================================================
+
+    const regenerateLink =
+        async (
+            agent
+        ) => {
+            const ok =
+                window.confirm(
+                    `Regenerate public link for "${agent.agent_name}"?\n\nThe old link will stop working.`
+                );
+
+            if (!ok) return;
+
+            try {
+                setLinkActionId(
+                    agent.id_agent
+                );
+
+                await apiFetch(
+                    `/agents/${agent.id_agent}/public-link`,
+                    {
+                        method:
+                            "POST",
+                    }
+                );
+
+                setMessage(
+                    "Public registration link regenerated."
+                );
+
+                await loadAgents();
+            } catch (
+                error
+            ) {
+                setError(
+                    error.message ||
+                        "Failed to regenerate link."
+                );
+            } finally {
+                setLinkActionId(
+                    null
+                );
+            }
+        };
+
+    // =================================================
+    // FILTER
+    // =================================================
+
+    const filteredAgents =
+        agents.filter(
+            (agent) => {
+                const key =
+                    search
+                        .trim()
+                        .toLowerCase();
+
+                if (!key)
+                    return true;
+
+                return [
+                    agent.agent_name,
+                    agent.contact_phone,
+                    agent.contact_email,
+                    agent.address,
+                ]
+                    .filter(Boolean)
+                    .some(
+                        (value) =>
+                            String(
+                                value
+                            )
+                                .toLowerCase()
+                                .includes(
+                                    key
+                                )
+                    );
+            }
+        );
 
     if (loading) {
         return (
@@ -348,14 +553,19 @@ function Agents() {
 
     return (
         <div className="agents-module">
+
             <div className="page-header">
+
                 <div>
-                    <h2>Agents</h2>
+                    <h2>
+                        Agents
+                    </h2>
 
                     <p>
-                        Manage distributor
-                        profiles and their
-                        customer registration
+                        Manage Agent
+                        profiles and
+                        customer
+                        registration
                         links.
                     </p>
                 </div>
@@ -364,7 +574,7 @@ function Agents() {
                     type="button"
                     className="primary-button"
                     onClick={
-                        openAddModal
+                        openAdd
                     }
                 >
                     + Add Agent
@@ -377,23 +587,23 @@ function Agents() {
                 </div>
             )}
 
-            {feedback && (
+            {message && (
                 <div className="success-banner">
-                    {feedback}
+                    {message}
                 </div>
             )}
 
             <div className="panel">
+
                 <div
                     className="agent-toolbar"
                     style={{
                         display:
                             "flex",
-                        gap: "12px",
                         justifyContent:
                             "space-between",
-                        alignItems:
-                            "center",
+                        gap:
+                            "12px",
                         marginBottom:
                             "16px",
                     }}
@@ -402,11 +612,16 @@ function Agents() {
                         type="search"
                         className="search-input"
                         placeholder="Search Agent..."
-                        value={search}
-                        onChange={(event) =>
-                            setSearch(
-                                event.target.value
-                            )
+                        value={
+                            search
+                        }
+                        onChange={
+                            (e) =>
+                                setSearch(
+                                    e
+                                        .target
+                                        .value
+                                )
                         }
                     />
 
@@ -414,12 +629,14 @@ function Agents() {
                         {
                             filteredAgents.length
                         }{" "}
-                        agent(s)
+                        Agent(s)
                     </span>
                 </div>
 
                 <div className="table-wrapper">
+
                     <table>
+
                         <thead>
                             <tr>
                                 <th>
@@ -445,6 +662,7 @@ function Agents() {
                         </thead>
 
                         <tbody>
+
                             {filteredAgents.length ===
                             0 ? (
                                 <tr>
@@ -465,6 +683,7 @@ function Agents() {
                                                 agent.id_agent
                                             }
                                         >
+
                                             <td>
                                                 <strong>
                                                     {
@@ -472,14 +691,7 @@ function Agents() {
                                                     }
                                                 </strong>
 
-                                                <div
-                                                    style={{
-                                                        fontSize:
-                                                            "11px",
-                                                        color:
-                                                            "#64748b",
-                                                    }}
-                                                >
+                                                <div>
                                                     ID: #
                                                     {
                                                         agent.id_agent
@@ -495,14 +707,7 @@ function Agents() {
                                                     }
                                                 </div>
 
-                                                <div
-                                                    style={{
-                                                        fontSize:
-                                                            "11px",
-                                                        color:
-                                                            "#64748b",
-                                                    }}
-                                                >
+                                                <div>
                                                     {
                                                         agent.contact_email ||
                                                         "-"
@@ -534,13 +739,22 @@ function Agents() {
                                                         0
                                                     }
                                                 </div>
+
+                                                <div>
+                                                    Rejected:{" "}
+                                                    {
+                                                        agent.rejected_registrations ||
+                                                        0
+                                                    }
+                                                </div>
                                             </td>
 
                                             <td>
+
                                                 <div
                                                     style={{
                                                         maxWidth:
-                                                            "310px",
+                                                            "320px",
                                                         wordBreak:
                                                             "break-all",
                                                         fontSize:
@@ -553,7 +767,7 @@ function Agents() {
                                                 </div>
 
                                                 <div
-                                                    className="action-buttons"
+                                                    className="agent-action-stack"
                                                     style={{
                                                         display:
                                                             "flex",
@@ -565,11 +779,12 @@ function Agents() {
                                                             "8px",
                                                     }}
                                                 >
+
                                                     <button
                                                         type="button"
                                                         className="secondary-button"
                                                         onClick={() =>
-                                                            copyPublicLink(
+                                                            copyLink(
                                                                 agent
                                                             )
                                                         }
@@ -584,7 +799,7 @@ function Agents() {
                                                         type="button"
                                                         className="secondary-button"
                                                         onClick={() =>
-                                                            sharePublicLink(
+                                                            shareLink(
                                                                 agent
                                                             )
                                                         }
@@ -603,12 +818,14 @@ function Agents() {
                                                     >
                                                         WhatsApp
                                                     </button>
+
                                                 </div>
                                             </td>
 
                                             <td>
+
                                                 <div
-                                                    className="action-buttons"
+                                                    className="agent-action-stack"
                                                     style={{
                                                         display:
                                                             "flex",
@@ -618,6 +835,7 @@ function Agents() {
                                                             "wrap",
                                                     }}
                                                 >
+
                                                     <button
                                                         type="button"
                                                         className="secondary-button"
@@ -635,14 +853,14 @@ function Agents() {
                                                     <button
                                                         type="button"
                                                         className="secondary-button"
-                                                        onClick={() =>
-                                                            regeneratePublicLink(
-                                                                agent
-                                                            )
-                                                        }
                                                         disabled={
                                                             linkActionId ===
                                                             agent.id_agent
+                                                        }
+                                                        onClick={() =>
+                                                            regenerateLink(
+                                                                agent
+                                                            )
                                                         }
                                                     >
                                                         {linkActionId ===
@@ -655,7 +873,7 @@ function Agents() {
                                                         type="button"
                                                         className="secondary-button"
                                                         onClick={() =>
-                                                            openEditModal(
+                                                            openEdit(
                                                                 agent
                                                             )
                                                         }
@@ -674,21 +892,29 @@ function Agents() {
                                                     >
                                                         Delete
                                                     </button>
+
                                                 </div>
                                             </td>
+
                                         </tr>
                                     )
                                 )
                             )}
+
                         </tbody>
+
                     </table>
+
                 </div>
             </div>
 
             {showModal && (
                 <div className="modal-backdrop">
+
                     <div className="modal-card">
+
                         <div className="modal-header">
+
                             <div>
                                 <h2>
                                     {editingAgent
@@ -698,9 +924,8 @@ function Agents() {
 
                                 <p>
                                     Agent does not
-                                    need a
-                                    backend login
-                                    account.
+                                    need a backend
+                                    login account.
                                 </p>
                             </div>
 
@@ -710,12 +935,10 @@ function Agents() {
                                 onClick={
                                     closeModal
                                 }
-                                disabled={
-                                    saving
-                                }
                             >
                                 ×
                             </button>
+
                         </div>
 
                         <form
@@ -723,6 +946,7 @@ function Agents() {
                                 handleSubmit
                             }
                         >
+
                             <div className="form-group">
                                 <label>
                                     Agent Name *
@@ -792,28 +1016,19 @@ function Agents() {
                                 />
                             </div>
 
-                            <div
-                                className="agent-link-note"
-                                style={{
-                                    marginBottom:
-                                        "16px",
-                                }}
-                            >
-                                After saving, ETL
+                            <div className="agent-link-note">
+                                After creating
+                                the Agent,
+                                the system
                                 automatically
-                                generates a unique
-                                customer
-                                registration link
-                                for this Agent.
+                                generates a
+                                unique public
+                                registration
+                                link.
                             </div>
 
-                            {feedback && (
-                                <div className="registration-error">
-                                    {feedback}
-                                </div>
-                            )}
-
                             <div className="modal-actions">
+
                                 <button
                                     type="button"
                                     className="secondary-button"
@@ -840,11 +1055,14 @@ function Agents() {
                                         ? "Update Agent"
                                         : "Create Agent"}
                                 </button>
+
                             </div>
                         </form>
+
                     </div>
                 </div>
             )}
+
         </div>
     );
 }

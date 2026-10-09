@@ -1,4 +1,5 @@
 import { useState } from "react";
+
 import Sidebar from "../components/Sidebar";
 
 function AdminLayout({
@@ -27,10 +28,13 @@ function AdminLayout({
             <Sidebar
                 user={user}
                 onLogout={onLogout}
-                collapsed={sidebarCollapsed}
+                collapsed={
+                    sidebarCollapsed
+                }
                 onToggle={() =>
                     setSidebarCollapsed(
-                        (prev) => !prev
+                        (prev) =>
+                            !prev
                     )
                 }
                 mobileOpen={
@@ -47,16 +51,17 @@ function AdminLayout({
                 <button
                     type="button"
                     className="sidebar-overlay"
-                    aria-label="Close navigation"
                     onClick={() =>
                         setMobileSidebarOpen(
                             false
                         )
                     }
+                    aria-label="Close navigation"
                 />
             )}
 
             <main className="main-content">
+
                 <div className="mobile-header">
                     <button
                         type="button"
@@ -66,7 +71,6 @@ function AdminLayout({
                                 true
                             )
                         }
-                        aria-label="Open navigation"
                     >
                         ☰
                     </button>
@@ -95,13 +99,16 @@ function AdminLayout({
 
                     <div className="topbar-right">
                         <div className="topbar-user">
+
                             <div className="topbar-avatar">
                                 {(
                                     user?.fullname ||
                                     user?.username ||
                                     "U"
                                 )
-                                    .charAt(0)
+                                    .charAt(
+                                        0
+                                    )
                                     .toUpperCase()}
                             </div>
 
@@ -117,6 +124,7 @@ function AdminLayout({
                                         "User"}
                                 </span>
                             </div>
+
                         </div>
                     </div>
                 </header>
@@ -124,6 +132,7 @@ function AdminLayout({
                 <section className="page-content">
                     {children}
                 </section>
+
             </main>
         </div>
     );

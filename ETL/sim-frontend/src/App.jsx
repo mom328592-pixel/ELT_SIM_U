@@ -86,11 +86,6 @@ const AccessDenied =
                                     ) || "null"
                                 );
 
-                            const roleId =
-                                Number(
-                                    user?.id_role ??
-                                        user?.role_id
-                                );
 
                           window.location.replace("/dashboard");
                         }}
@@ -685,9 +680,9 @@ function App() {
                     "success"
                 );
 
-                window.location.href =
-                    roleId === 3
-                         "/dashboard";
+                window.location.replace(
+    "/dashboard"
+);
 
             } catch (
                 error
@@ -789,6 +784,7 @@ function App() {
                             allowedRoles={[
                                 1,
                                 2,
+                                3,
                             ]}
                         >
                             <AdminLayout
@@ -825,6 +821,7 @@ function App() {
                             allowedRoles={[
                                 1,
                                 2,
+                                3,
                             ]}
                         >
                             <AdminLayout
@@ -857,6 +854,7 @@ function App() {
                             allowedRoles={[
                                 1,
                                 2,
+                                3,
                             ]}
                         >
                             <AdminLayout
@@ -885,6 +883,7 @@ function App() {
                             allowedRoles={[
                                 1,
                                 2,
+                                3,
                             ]}
                         >
                             <AdminLayout
@@ -913,6 +912,7 @@ function App() {
                             allowedRoles={[
                                 1,
                                 2,
+                                3,
                             ]}
                         >
                             <AdminLayout
@@ -945,6 +945,7 @@ function App() {
                             allowedRoles={[
                                 1,
                                 2,
+                                3,
                             ]}
                         >
                             <AdminLayout
