@@ -462,7 +462,7 @@ app.use(
 app.use(
     "/agents",
     authenticateToken,
-    authorizeRoles(1, 2),
+    authorizeRoles(1, 2, 3),
     agentsRoutes
 );
 
@@ -524,7 +524,7 @@ app.use(
 app.use(
     "/registrations",
     authenticateToken,
-    authorizeRoles(1, 2),
+    authorizeRoles(1, 2, 3),
     registrationsRoutes
 );
 
@@ -569,7 +569,7 @@ app.use(
 app.use(
     "/reports",
     authenticateToken,
-    authorizeRoles(1, 2),
+    authorizeRoles(1, 2, 3),
     reportsRoutes
 );
 

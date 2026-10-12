@@ -854,7 +854,6 @@ function App() {
                             allowedRoles={[
                                 1,
                                 2,
-                                3,
                             ]}
                         >
                             <AdminLayout
@@ -945,7 +944,6 @@ function App() {
                             allowedRoles={[
                                 1,
                                 2,
-                                3,
                             ]}
                         >
                             <AdminLayout

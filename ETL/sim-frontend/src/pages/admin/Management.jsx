@@ -32,7 +32,7 @@ function Management() {
 
     // Admin + Staff
     if (
-        [1, 2].includes(
+        [1, 2, 3].includes(
             roleId
         )
     ) {
@@ -111,7 +111,7 @@ function Management() {
 
             {activeTab ===
                 "agents" &&
-                [1, 2].includes(
+                [1, 2, 3].includes(
                     roleId
                 ) && (
                     <Agents />
