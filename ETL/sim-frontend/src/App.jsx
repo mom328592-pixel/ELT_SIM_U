@@ -13,6 +13,7 @@ import {
 } from "react-router-dom";
 
 import "./App.css";
+import "./ui.css";
 
 import AdminLayout from "./layouts/AdminLayout";
 import CustomerLayout from "./layouts/CustomerLayout";
