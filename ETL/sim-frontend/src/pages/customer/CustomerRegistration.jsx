@@ -1451,29 +1451,6 @@ function CustomerRegistration() {
 
           </div>
 
-          <div className="input-field">
-
-            <label>
-              Phone Number
-            </label>
-
-            <input
-              type="tel"
-              name="phone_number"
-              value={
-                form.phone_number
-              }
-              onChange={
-                handleInputChange
-              }
-              placeholder="020..."
-              disabled={
-                loading
-              }
-            />
-
-          </div>
-
           <div className="selected-sim-info">
 
             <span>

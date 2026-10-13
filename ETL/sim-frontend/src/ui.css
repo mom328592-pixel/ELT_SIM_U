@@ -1,7 +1,7 @@
 /* ETL SIM UI refresh: restrained colors, improved readability, and report layout. */
 :root {
-  --brand: #536981;
-  --brand-2: #647b91;
+  --brand: #005ec3;
+  --brand-2: #005ec3;
   --brand-soft: #edf1f5;
   --ink: #252e3a;
   --muted: #6f7885;
@@ -13,7 +13,7 @@
   --success: #567d68;
   --warning: #9a7a42;
   --danger: #a15d5d;
-  --info: #607994;
+  --info: #0004ff;
   --shadow-sm: 0 2px 8px rgba(29, 41, 55, .035);
   --shadow-md: 0 8px 22px rgba(29, 41, 55, .06);
   --shadow-lg: 0 18px 46px rgba(29, 41, 55, .12);
@@ -65,7 +65,7 @@ button {
 
 .login-icon,
 .brand-logo {
-  background: #536981 !important;
+  background: #0023c2 !important;
   box-shadow: none !important;
 }
 
@@ -73,7 +73,7 @@ button {
 .primary-button,
 .primary-registration-button,
 .btn-primary {
-  background: #536981 !important;
+  background: #0668d2 !important;
   box-shadow: 0 3px 8px rgba(45, 61, 79, .12) !important;
   transition: background .18s ease, transform .18s ease;
 }
@@ -82,7 +82,7 @@ button {
 .primary-button:hover,
 .primary-registration-button:hover,
 .btn-primary:hover {
-  background: #43566b !important;
+  background: #0099ff !important;
   filter: none !important;
   transform: translateY(-1px);
 }
@@ -667,7 +667,7 @@ button {
   height: 40px;
   border-radius: 12px;
   background: #eef1f4;
-  color: #697b8e;
+  color: #005ec3;
   font-size: 25px;
 }
 
